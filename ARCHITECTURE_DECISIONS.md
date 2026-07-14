@@ -730,6 +730,54 @@ Revisit this ADR when Phase 005 (Folder Structure) is planned. If path aliases a
 
 ---
 
+# ADR-017
+
+## ESLint + Prettier Configuration Scope
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+Phase 004 required a deliberate decision on ESLint and Prettier, the same way Phase 003b (ADR-016) reviewed TypeScript.
+
+`.eslintrc.js` extends `@react-native/eslint-config`, which was inspected directly in `node_modules`. It already bundles React, React Hooks, React Native, TypeScript, and Jest plugin rules with per-filetype overrides, and extends `eslint-config-prettier` to disable any stylistic rule that would conflict with Prettier. `npx eslint .` passed cleanly before this phase.
+
+`.prettierrc.js` already carried a deliberate baseline (`arrowParens: 'avoid'`, `singleQuote: true`, `trailingComma: 'all'`). However, no `.prettierignore` (or `.eslintignore`) existed, and no npm script could run Prettier at all. Running `npx prettier --check .` surfaced 190 false-positive files — generated Android build JSON under `android/build/`, and every project Markdown document — none of which should ever be reformatted by Prettier.
+
+### Decision
+
+1. Accept `@react-native/eslint-config` unmodified — no local rule overrides.
+2. Add `.prettierignore` and `.eslintignore`, both excluding `android/` and `ios/` (native platform projects; no hand-written JS/TS lives there, and their build outputs are already `.gitignore`d).
+3. `.prettierignore` additionally excludes `package-lock.json` (npm-regenerated; reformatting it only creates churn) and `*.md` — every project document uses a deliberate one-sentence-per-line style, and Prettier's Markdown formatter would collapse or rewrite that style project-wide.
+4. Add a `format:check` npm script (`prettier --check .`), mirroring the existing `lint` script, so Prettier compliance is actually checkable going forward.
+5. Reformatted `package.json` itself (Prettier flagged one real issue: a missing trailing newline) since it is genuine project source, not a generated or excluded file.
+
+### Consequences
+
+Advantages
+
+Prettier is now actually usable and enforceable, matching the standard ESLint already had
+
+Project documentation's intentional formatting is protected from being silently rewritten
+
+No new dependencies — only configuration and one npm script were added
+
+Disadvantages
+
+None identified
+
+### Future
+
+If a real `src/` tree with hand-written code appears under `android/` or `ios/` (unlikely, per ADR-002: Kotlin owns native logic, not JS), the ignore scope in this ADR should be revisited.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.

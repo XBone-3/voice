@@ -14,10 +14,11 @@ TypeScript Configuration
 
 Phase 004
 ESLint + Prettier
-⏭ Next — default config present from CLI template, not yet deliberately reviewed
+✅ Complete — `@react-native/eslint-config` accepted as-is; added `.prettierignore`/`.eslintignore` and a `format:check` script; ADR-017 records the scope decision
 
 Phase 005
 Folder Structure
+⏭ Next
 
 Phase 006
 Environment Configuration

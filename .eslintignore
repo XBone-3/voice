@@ -1,0 +1,3 @@
+# Native platform projects — no hand-written JS/TS lives here; keeps lint fast and scoped
+android/
+ios/
