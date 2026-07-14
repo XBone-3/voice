@@ -10,11 +10,11 @@ React Native Setup
 
 Phase 003
 TypeScript Configuration
-⏭ Next — default `@react-native/typescript-config` present, not yet deliberately reviewed/customized
+✅ Complete — split into Phase 003a (fixed missing `@react-native/jest-preset` dependency) and Phase 003b (reviewed and formally accepted the inherited strict TypeScript config; ADR-016 records the decision and defers path aliases to Phase 005)
 
 Phase 004
 ESLint + Prettier
-◻ Not started — default config present from CLI template, not yet deliberately reviewed
+⏭ Next — default config present from CLI template, not yet deliberately reviewed
 
 Phase 005
 Folder Structure

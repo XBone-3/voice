@@ -676,6 +676,60 @@ Reduced redesign
 
 ---
 
+# ADR-016
+
+## TypeScript Configuration Baseline
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+Phase 003 required a deliberate decision on the TypeScript configuration Nova is built on, rather than silently relying on whatever the React Native CLI happened to generate.
+
+`tsconfig.json` extends `@react-native/typescript-config` (version 0.86.0). That preset's own `tsconfig.json` was inspected directly and already sets:
+
+- `strict: true`
+- `isolatedModules: true`
+- `noEmit: true`
+- `moduleResolution: "bundler"`
+- `esModuleInterop: true`
+- `jsx: "react-native"`
+- Modern `es2022`-range `lib` targets
+
+This satisfies the Clean Code and Scalability sections of ENGINEERING_PRINCIPLES.md and the Maintainability requirements of NON_FUNCTIONAL_REQUIREMENTS.md without modification.
+
+### Decision
+
+Accept `@react-native/typescript-config` as-is. No local `compilerOptions` overrides are introduced in this phase.
+
+Path aliases (e.g. `@voice-engine/*`, `@command-engine/*`, `@shared/*`) are explicitly deferred to Phase 005 (Folder Structure). Introducing aliases now, before any of those directories exist, would be speculative configuration with nothing to alias. When Phase 005 creates the real module directories, that phase must also decide the accompanying Metro/Babel module-resolution mechanism — Metro does not read `tsconfig.json` `paths` for runtime module resolution, so a resolver such as `babel-plugin-module-resolver` (or an equivalent Metro-level solution) will need to be evaluated then.
+
+### Consequences
+
+Advantages
+
+No premature or speculative configuration
+
+Production-grade strictness already in place with zero added maintenance surface
+
+Clear, documented handoff point for Phase 005
+
+Disadvantages
+
+Deep relative imports (`../../../`) remain necessary until Phase 005 introduces aliases
+
+### Future
+
+Revisit this ADR when Phase 005 (Folder Structure) is planned. If path aliases are introduced then, that phase should reference this ADR and record the chosen module-resolution mechanism.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.
