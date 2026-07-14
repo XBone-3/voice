@@ -1,0 +1,699 @@
+# ARCHITECTURE_DECISIONS.md
+
+# Architecture Decision Records (ADR)
+
+## Purpose
+
+This document records every major architectural decision made throughout the project.
+
+Features explain **what** was built.
+
+Code explains **how** it was built.
+
+Architecture Decision Records explain **why** it was built that way.
+
+Future contributors—including Claude Code—must read this document before proposing architectural changes.
+
+No architectural decision should be reversed without creating a new ADR explaining the reason.
+
+---
+
+# ADR Format
+
+Every decision must follow this structure.
+
+---
+
+## ADR-XXX
+
+Title
+
+Date
+
+Status
+
+Context
+
+Problem
+
+Options Considered
+
+Decision
+
+Consequences
+
+Future Considerations
+
+---
+
+Status values
+
+Accepted
+
+Proposed
+
+Deprecated
+
+Superseded
+
+Rejected
+
+---
+
+# ADR-001
+
+## Android Only
+
+Status
+
+Accepted
+
+Date
+
+YYYY-MM-DD
+
+### Context
+
+The assistant is intended to integrate deeply with the Android operating system.
+
+Supporting iOS would introduce architectural compromises because iOS restricts background execution, notification access, accessibility automation, and system control.
+
+### Decision
+
+Support Android exclusively.
+
+Do not build cross-platform abstractions for Apple platforms.
+
+### Consequences
+
+Advantages
+
+Full Android API access
+
+Better performance
+
+Simpler architecture
+
+Lower maintenance cost
+
+Offline capability
+
+Background services
+
+Accessibility integration
+
+Disadvantages
+
+No iOS support
+
+### Future
+
+Android remains the primary platform unless this decision is formally superseded.
+
+---
+
+# ADR-002
+
+## Kotlin Owns Native Logic
+
+Status
+
+Accepted
+
+### Context
+
+React Native is excellent for UI.
+
+Android system functionality is significantly more reliable in Kotlin.
+
+### Decision
+
+Business logic interacting with Android belongs in Kotlin.
+
+React Native owns:
+
+UI
+
+Navigation
+
+Animations
+
+Presentation
+
+Kotlin owns:
+
+Voice
+
+Permissions
+
+Services
+
+Notifications
+
+Accessibility
+
+Automation
+
+Media
+
+Storage
+
+Sensors
+
+The React Native bridge must remain thin.
+
+### Consequences
+
+Cleaner architecture
+
+Higher reliability
+
+Better debugging
+
+Improved performance
+
+---
+
+# ADR-003
+
+## Voice First Interface
+
+Status
+
+Accepted
+
+### Context
+
+The project vision is an assistant that reduces screen interaction.
+
+### Decision
+
+Voice becomes the primary interaction model.
+
+Typing becomes secondary.
+
+Touch becomes tertiary.
+
+Every feature should eventually become accessible through voice.
+
+### Consequences
+
+Simpler user experience
+
+Higher accessibility
+
+Reduced UI complexity
+
+---
+
+# ADR-004
+
+## Offline First
+
+Status
+
+Accepted
+
+### Context
+
+Internet connectivity should never determine whether the assistant functions.
+
+### Decision
+
+Core capabilities must remain operational offline.
+
+Examples
+
+Notifications
+
+Calls
+
+Contacts
+
+SMS
+
+Automation
+
+Media
+
+Calendar
+
+Memory
+
+History
+
+### Consequences
+
+Improved privacy
+
+Better responsiveness
+
+More reliable experience
+
+Reduced external dependencies
+
+---
+
+# ADR-005
+
+## AI Is Optional
+
+Status
+
+Accepted
+
+### Context
+
+Many assistants unnecessarily invoke AI for deterministic tasks.
+
+### Decision
+
+AI is only used when deterministic logic cannot satisfy the request.
+
+Decision hierarchy
+
+Android APIs
+
+↓
+
+Rule Engine
+
+↓
+
+Context Engine
+
+↓
+
+Local AI
+
+↓
+
+Clarification
+
+Never invoke AI for simple deterministic actions.
+
+### Consequences
+
+Faster execution
+
+Lower battery consumption
+
+Predictable behavior
+
+Offline support
+
+---
+
+# ADR-006
+
+## Foreground Service Architecture
+
+Status
+
+Accepted
+
+### Context
+
+The assistant should remain available without requiring the UI to stay open.
+
+### Decision
+
+Core assistant functionality operates inside a Foreground Service.
+
+React Native UI is optional.
+
+The assistant continues operating while the application is backgrounded.
+
+### Consequences
+
+Continuous availability
+
+Improved responsiveness
+
+Requires careful battery optimization
+
+---
+
+# ADR-007
+
+## Modular Engine Architecture
+
+Status
+
+Accepted
+
+### Context
+
+Large monolithic assistants become difficult to maintain.
+
+### Decision
+
+Split the assistant into independent engines.
+
+Voice Engine
+
+Wake Word Engine
+
+Speech Engine
+
+Command Engine
+
+Context Engine
+
+Notification Engine
+
+Accessibility Engine
+
+Automation Engine
+
+Memory Engine
+
+Plugin Engine
+
+Bridge Engine
+
+Each engine communicates through interfaces.
+
+### Consequences
+
+Independent testing
+
+Replaceable implementations
+
+Future extensibility
+
+Simpler maintenance
+
+---
+
+# ADR-008
+
+## Thin Bridge
+
+Status
+
+Accepted
+
+### Context
+
+Large React Native bridges become difficult to maintain.
+
+### Decision
+
+The bridge only transfers:
+
+Commands
+
+Events
+
+State
+
+No business logic.
+
+No Android logic.
+
+### Consequences
+
+Better separation
+
+Improved maintainability
+
+Cleaner debugging
+
+---
+
+# ADR-009
+
+## Modern Material Design
+
+Status
+
+Accepted
+
+### Context
+
+The assistant should feel native.
+
+### Decision
+
+Use Material 3 principles.
+
+Generous spacing.
+
+Meaningful motion.
+
+Dark mode.
+
+Adaptive layouts.
+
+Minimal UI.
+
+Avoid visual clutter.
+
+### Consequences
+
+Premium experience
+
+Better accessibility
+
+Future Android compatibility
+
+---
+
+# ADR-010
+
+## Physical Device Development
+
+Status
+
+Accepted
+
+### Context
+
+Many Android APIs behave differently on emulators.
+
+### Decision
+
+Development targets a real Android device connected through USB.
+
+The emulator is optional.
+
+Physical device verification is mandatory.
+
+### Consequences
+
+More reliable testing
+
+Fewer production surprises
+
+---
+
+# ADR-011
+
+## Local Data Ownership
+
+Status
+
+Accepted
+
+### Context
+
+User trust is fundamental.
+
+### Decision
+
+Assistant memory belongs to the user.
+
+Store locally.
+
+Encrypt sensitive information.
+
+Never upload automatically.
+
+### Consequences
+
+Higher privacy
+
+Offline support
+
+Reduced compliance complexity
+
+---
+
+# ADR-012
+
+## Navigation Architecture
+
+Status
+
+Accepted
+
+### Context
+
+Single-screen applications become unmaintainable.
+
+### Decision
+
+Every major subsystem receives its own screen.
+
+Examples
+
+Assistant
+
+Notifications
+
+Automation
+
+Memory
+
+History
+
+Plugins
+
+Settings
+
+Developer
+
+Diagnostics
+
+Never build a giant scrolling dashboard.
+
+### Consequences
+
+Improved scalability
+
+Cleaner code
+
+Better UX
+
+---
+
+# ADR-013
+
+## Dependency Policy
+
+Status
+
+Accepted
+
+### Context
+
+Dependency bloat increases maintenance cost.
+
+### Decision
+
+Before adding any dependency ask:
+
+Can Android already do this?
+
+Can Kotlin already do this?
+
+Can Jetpack already do this?
+
+Can we reasonably build it?
+
+If yes,
+
+Do not add another dependency.
+
+Every dependency requires documented justification.
+
+### Consequences
+
+Smaller APK
+
+Lower maintenance
+
+Better stability
+
+---
+
+# ADR-014
+
+## Performance Over Features
+
+Status
+
+Accepted
+
+### Context
+
+Slow assistants feel unintelligent.
+
+### Decision
+
+Performance regressions block feature work.
+
+If latency exceeds targets,
+
+Optimization becomes higher priority than new functionality.
+
+### Consequences
+
+Consistently responsive assistant
+
+Higher perceived intelligence
+
+Better battery usage
+
+---
+
+# ADR-015
+
+## Documentation Is Code
+
+Status
+
+Accepted
+
+### Context
+
+Long-lived projects lose context over time.
+
+### Decision
+
+Every architectural change updates:
+
+README
+
+SESSION.md
+
+ROADMAP
+
+Architecture Decisions
+
+Relevant documentation
+
+No phase is complete until documentation is updated.
+
+### Consequences
+
+Knowledge retention
+
+Faster onboarding
+
+Reduced redesign
+
+---
+
+# Future ADRs
+
+Every future architectural decision must follow this document.
+
+Never overwrite previous decisions.
+
+Instead
+
+Create a new ADR.
+
+If necessary,
+
+Mark the previous ADR as
+
+Superseded
+
+and explain why.
+
+Architecture evolves.
+
+History should never be lost.
