@@ -116,4 +116,9 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // ProcessLifecycleOwner (Phase 020, ADR-033) — already a transitive
+    // dependency at runtime (confirmed via the Gradle cache); declared
+    // explicitly so it's on the compile classpath for LifecycleManager.kt.
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
 }

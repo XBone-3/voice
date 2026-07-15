@@ -20,27 +20,27 @@ main
 
 Build (`cd android && ./gradlew assembleDebug`)
 
-✅ Passing (unchanged this session — no code was written)
+✅ Passing (zero compiler warnings, first-try clean build)
 
 Lint (`npx eslint .`)
 
-✅ Passing (unchanged)
+✅ Passing
 
 Format (`npx prettier --check .` / `npm run format:check`)
 
-✅ Passing (unchanged)
+✅ Passing
 
 TypeScript (`npx tsc --noEmit`)
 
-✅ Passing (unchanged)
+✅ Passing
 
 Unit Tests (`npx jest`)
 
-✅ Passing (10 suites, 38 tests — unchanged, no test code touched)
+✅ Passing (11 suites, 40 tests — 2 new this phase)
 
 Physical Device
 
-✅ Last verified in Phase 018 — no code changed this session, so no new device verification was needed
+✅ Verified — real Home-button background/foreground round-trip confirmed both the command and event bridge patterns (see Testing)
 
 Documentation
 
@@ -56,62 +56,59 @@ Stage 1 — Foundation
 
 Current Phase
 
+Phase 021
+
+Broadcast Receivers
+
+Last Completed
+
 Phase 020
 
-Lifecycle Manager (not yet planned)
-
-Last Completed (shipped code)
-
-Phase 018
-
-Permission Manager
-
-Phase 019 Outcome
-
-**Deferred, not completed.** Foreground Service — researched and found that Android 14+ (Nova's target/compile SDK is 36) leaves no honest `foregroundServiceType` to declare with zero real engine capability behind it yet. See ADR-032 and Completed This Session below.
+Lifecycle Manager — native process-lifecycle tracker (ADR-033), independent of the deferred Foreground Service (Phase 019)
 
 Completion
 
-18 / 100 Phases shipped (Phase 019 deferred — see ADR-032)
+20 / 100 Phases shipped (Phase 019 remains deferred — see ADR-032)
 
 ---
 
 ## Current Objective
 
-Phase 020 (Lifecycle Manager) is next — not yet planned in detail. Likely scoped as a native Activity/process lifecycle tracker (foreground/background/destroy transitions exposed as events via the Phase 017 event-emission pattern), independent of the deferred Foreground Service — to be confirmed when actually planned, not assumed here.
+Phase 021 (Broadcast Receivers) is next per PROJECT_ROADMAP.md — not yet planned in detail.
 
 ---
 
 ## Completed This Session
 
-✔ **Began planning Phase 019 (Foreground Service)** per PROJECT_ROADMAP.md/ADR-006/ADR-028, carrying forward the "verify framework behavior against source/docs before implementing" discipline established in ADR-029/ADR-031.
+✔ **Resolved a real scope fork before writing code.** ADR-028 groups Phase 019 (Foreground Service, deferred) and Phase 020 (Lifecycle Manager) under the same `services/` package, raising a genuine question: does "Lifecycle Manager" mean an independent app/process lifecycle tracker, or lifecycle coordination *for* the (non-existent) Foreground Service — which would be just as blocked? Asked the user rather than assuming; confirmed it's the independent tracker.
 
-✔ **Researched Android 14+/15+ foreground service type requirements before writing any code** and found a genuine, consequential blocker: every foreground service must declare a `foregroundServiceType` matching real, current behavior, enforced by the OS itself (not just Play Store policy).
-  - `specialUse` (the closest thing to a generic catch-all) is **restricted to system apps, VPN apps, and apps holding `SCHEDULE_EXACT_ALARM`/`USE_EXACT_ALARM`** as of Android 14 — declaring it otherwise throws `ForegroundServiceTypeNotAllowedException` at runtime, a real crash, not a store-review issue.
-  - `dataSync` (the historically common generic-background-work type) is capped at **6 hours per rolling 24-hour period on Android 15+**, after which the OS calls `onTimeout()` and stops it until the user reopens the app — directly contradicting Nova's own vision (VISION.md/PROJECT_CONTEXT.md: "always-awake, continuously listening"; ADR-006: "continues operating while backgrounded").
-  - The type Nova will actually want (`microphone`, once always-listening voice capture is real) can't be honestly declared yet — Phase 026/027 (Audio Engine/Microphone Manager) don't exist.
+✔ **Built `services/LifecycleManager.kt`** (plain Kotlin, no RN dependency, per ADR-028's package split) wrapping `ProcessLifecycleOwner` — confirmed already present transitively (Gradle cache) and declared explicitly in `app/build.gradle` for the compile classpath, since Jetpack Lifecycle is already named in the project's own tech stack. `isInForeground()` reads the **current** lifecycle state live (no manually-tracked variable, no startup race); `start()` registers a `DefaultLifecycleObserver` once, dispatched to the main thread since `Lifecycle.addObserver()` requires it and `NativeModule.initialize()` isn't guaranteed to run there.
 
-✔ **Asked the user how to proceed** rather than silently picking an option — unlike Phase 018's scoping question (where every candidate answer was safe), every option here carried a genuine, consequential downside (crash risk, contradicting the core vision, or building something that would need reworking, not just extending, once a real engine existed). The user chose to defer Phase 019 entirely rather than ship a placeholder.
+✔ **Built a thin `bridge/LifecycleManagerModule.kt`** TurboModule, registered in the existing `BridgePackage` — the **first module to combine both proven bridge patterns from the start**: `isInForeground(): Promise<Boolean>` (command, Phase 016's pattern) and `onLifecycleChanged` (event, Phase 017's pattern), rather than adding one in a later phase the way `NativeBridgeInfo` did.
 
-✔ **No Foreground Service code was written.** Phase 019 is marked **Deferred** (not Complete) in PROJECT_ROADMAP.md/PROJECT_STATE.json, with the research preserved so whichever future phase (most likely Phase 026 Audio Engine or Phase 027 Microphone Manager) actually builds it doesn't have to re-derive this. Recorded as ADR-032.
+✔ **Zero compile errors this time** — applied the ADR-031 lesson (generated codegen classes keep the `Native` prefix, e.g. `NativeLifecycleManagerSpec`) correctly from the start; `gradlew assembleDebug` succeeded on the first attempt.
 
-✔ Confirmed Phase 020 (Lifecycle Manager) is **not** automatically blocked by Phase 019's deferral — a native Activity/process lifecycle tracker doesn't need a foreground service, a special permission, or any OS-level type declaration, so it can follow the same "build infrastructure ahead of the engine" pattern Phase 016–018 used. This is not yet confirmed as the actual scope, only that it isn't blocked — full planning is Phase 020's own job, next session.
+✔ **On-device verification exercised a real background/foreground round-trip**, not just a cold launch: installed, launched — confirmed both `isInForeground()` (command) and the initial `onLifecycleChanged` (event) fired correctly. Pressed the hardware Home button to genuinely background the app — confirmed the `'App backgrounded'` event fired, plus a bonus confirmation that Phase 017's `onMemoryPressure` event still works (`level 20` = the real `TRIM_MEMORY_UI_HIDDEN` signal Android sends on backgrounding). Relaunched — confirmed `'App foregrounded'` fired again. Navigated to `DiagnosticsScreen` and confirmed the full, correctly-ordered event timeline displayed with **zero code changes** to that screen, extending ADR-030's confirmation. No crashes.
+
+✔ 2 new Jest tests (`isInForeground`/`subscribeToLifecycle` not-linked paths, mirroring `permissions.test.ts`'s pattern exactly). Full regression: `eslint`/`prettier`/`tsc`/`jest` (11 suites, 40 tests) all pass, `gradlew assembleDebug` clean, zero warnings.
+
+✔ Recorded the scope resolution and design as ADR-033.
 
 ---
 
 ## Pending
 
-Phase 020 — Lifecycle Manager — not yet planned
+Phase 021 — Broadcast Receivers — not yet planned
 
-Phase 019 — Foreground Service — deferred to whichever phase (likely 026/027) first has a real capability justifying a genuine `foregroundServiceType`
+Phase 019 — Foreground Service — still deferred to whichever phase (likely 026/027) first has a real capability justifying a genuine `foregroundServiceType` (ADR-032)
 
-Phase 021 onward — per PROJECT_ROADMAP.md, none started
+Phase 022 onward — per PROJECT_ROADMAP.md, none started
 
 ---
 
 ## Blockers
 
-None for Phase 020. Phase 019 (Foreground Service) is blocked until a real engine capability exists to justify an honest `foregroundServiceType` — see ADR-032. This is an intentional, documented block, not an accidental one.
+None for Phase 021. Phase 019 (Foreground Service) remains intentionally blocked — see ADR-032.
 
 ---
 
@@ -137,18 +134,21 @@ None for Phase 020. Phase 019 (Foreground Service) is blocked until a real engin
 
 10. `PermissionManager.requestPermission()` only supports one in-flight request at a time; no rationale/re-ask UX yet (ADR-031) — deferred to whichever phase first has a real user-facing permission moment.
 
-11. **New this session:** Phase 019 (Foreground Service) is deferred, not built — see ADR-032. Nova currently has no persistent background-operation mechanism at all, meaning "the assistant continues operating while backgrounded" (ADR-006) is not yet true in practice. This is expected at this stage (no engine has anything to do in the background yet) but is worth tracking explicitly rather than letting it go unnoticed as more phases complete.
+11. Phase 019 (Foreground Service) is deferred, not built — see ADR-032. Nova currently has no persistent background-operation mechanism at all; "the assistant continues operating while backgrounded" (ADR-006) is not yet true in practice. Expected at this stage, but tracked explicitly.
+
+12. **New this session:** `services/LifecycleManager.kt`'s `start()` only supports a single registered callback — fine today (exactly one consumer, `LifecycleManagerModule`), but a future native engine wanting its own direct subscription (bypassing the bridge) will need this extended to a listener list (ADR-033).
 
 ---
 
 ## Technical Debt
 
 - App branding/identity not yet applied (see Known Issues #1).
-- Alias definitions still require keeping two files in sync by hand (`babel.config.js`, `tsconfig.json`) — 11 aliases.
+- Alias definitions still require keeping two files in sync by hand (`babel.config.js`, `tsconfig.json`) — 11 aliases, unchanged this phase (`@nativeSpecs`/`@services` already covered the new files, no new top-level `src/` folder was needed).
 - Settings persistence is a known, explicit gap until Phase 023/024 (see Known Issues #4).
 - Accessibility unaudited (see Known Issues #7).
 - `PermissionManager` supports only one concurrent request and no rationale UX yet (see Known Issues #10).
 - No Foreground Service exists yet — ADR-006's "continues operating while backgrounded" is aspirational until Phase 026/027 or whichever phase builds it (see Known Issues #11).
+- `LifecycleManager.start()` supports only one listener (see Known Issues #12).
 
 ---
 
@@ -176,11 +176,21 @@ Verified — `adb devices` reports `10BEAG3HR7003TF	device`
 
 Last Tested
 
-2026-07-15 (Phase 018 — unchanged this session, no code was written)
+2026-07-15
 
-Tests Performed This Session
+Tests Performed
 
-None — this session was research and a scoping decision, not implementation. Full regression from Phase 018 remains the last verified state: `eslint`/`prettier`/`tsc`/`jest` (10 suites, 38 tests) all passing, `gradlew assembleDebug` clean, on-device verification of the Permission Manager's full check→request→OS-dialog→grant flow.
+✔ `npx eslint .` — pass
+
+✔ `npx prettier --check .` — pass
+
+✔ `npx tsc --noEmit` — pass
+
+✔ `npx jest` — pass (11 suites, 40 tests; 2 new in `lifecycle.test.ts`)
+
+✔ `cd android && ./gradlew assembleDebug` — BUILD SUCCESSFUL, zero compiler warnings, first attempt (no compile errors this time)
+
+✔ Installed and launched on the physical device; confirmed `isInForeground()` command and `onLifecycleChanged` event both fire correctly on launch; pressed the hardware Home button to genuinely background the app and confirmed the backgrounded event (plus a bonus reconfirmation of Phase 017's memory-pressure event); relaunched and confirmed the foregrounded event fired again; confirmed `DiagnosticsScreen` displays the full event timeline correctly with zero code changes; no crashes throughout
 
 Pending
 
@@ -196,11 +206,11 @@ Repository state matches:
 
 ✔ CLAUDE.md
 
-✔ ARCHITECTURE_DECISIONS.md ADR-016 through ADR-032 (ADR-032 new this session)
+✔ ARCHITECTURE_DECISIONS.md ADR-016 through ADR-033 (ADR-033 new this session)
 
 Repository state conflicts with:
 
-None open. ADR-006's "Foreground Service Architecture" is not yet realized in code — this is an explicitly tracked, intentional gap (ADR-032), not a silent conflict.
+None open. ADR-006's "Foreground Service Architecture" remains an explicitly tracked, intentional gap (ADR-032), not a silent conflict.
 
 ---
 
@@ -212,7 +222,7 @@ README
 
 Roadmap
 
-✅ Updated — Phase 019 marked Deferred (not Complete) with the research findings, Phase 020 marked next
+✅ Updated — Phase 020 marked complete, Phase 021 marked next
 
 Session
 
@@ -220,27 +230,27 @@ Session
 
 ADR
 
-✅ Updated — ADR-032 added
+✅ Updated — ADR-033 added
 
 Architecture Docs
 
-Unchanged this phase (`docs/architecture/overview.md` last updated Phase 015)
+Unchanged this phase (`docs/architecture/overview.md` last updated Phase 015) — should be revisited once a few more native-infra phases (021–022) land
 
 ---
 
 ## Next Phase
 
-Phase 020
+Phase 021
 
-Lifecycle Manager
+Broadcast Receivers
 
 Goal
 
-Not yet planned in detail. Working hypothesis (to be confirmed, not assumed, when this phase is actually planned): a native Activity/process lifecycle tracker — foreground/background/destroy transitions exposed to JS as events, reusing the `NativeEventEmitter` pattern ADR-030 already proved — giving future engines a way to know when the app's lifecycle changes without each building its own `ActivityLifecycleCallbacks`/`LifecycleEventListener` plumbing.
+Not yet planned in detail. Per ADR-028's package layout, this populates `android/.../receivers/` with `BroadcastReceiver` infrastructure.
 
 Dependencies
 
-None blocking — independent of Phase 019's deferred Foreground Service
+Phase 020 (Lifecycle Manager) — complete; any future receiver-driven engine can now also observe app foreground/background state via `LifecycleManager`
 
 Expected Duration
 
@@ -255,28 +265,29 @@ When starting a new session:
 1. Read START_HERE.md and DOCS_MANIFEST.json first (hash-check protocol). Only re-read a static document in full if its hash no longer matches.
 2. Always read all four dynamic documents in full: SESSION.md (this file), PROJECT_STATE.json, PROJECT_ROADMAP.md, ARCHITECTURE_DECISIONS.md.
 3. Verify repository health against the actual files and toolchain.
-4. Continue from Phase 020 (Lifecycle Manager) — Phase 019 (Foreground Service) is intentionally deferred; do not attempt to build it until a real engine phase (most likely 026/027) justifies a genuine `foregroundServiceType`. See ADR-032 before reconsidering this.
+4. Continue from Phase 021 (Broadcast Receivers). Phase 019 (Foreground Service) remains intentionally deferred — see ADR-032 before reconsidering it.
 5. Do not redesign previous phases.
 6. If a native-module phase behaves inexplicably on-device after several rebuilds within the same session, try a fully clean rebuild before spending further effort on architectural theories — see ADR-029.
-7. If a roadmap phase name is ambiguous relative to what a prior phase already delivered, ask the user rather than guessing — see ADR-030's Context section.
-8. Before writing native code that assumes a framework or OS behavior (e.g. "is this Android permission/service type actually usable the way I assume?"), verify against current official docs first — see ADR-031 and, especially, ADR-032, where this exact check prevented shipping something that would have crashed or silently contradicted Nova's own vision.
+7. If a roadmap phase name is ambiguous relative to what a prior phase already delivered, or relative to another phase's deferral, ask the user rather than guessing — see ADR-030 and ADR-033's Context sections for two different examples of this.
+8. Before writing native code that assumes a framework or OS behavior, verify against current official docs first — see ADR-031/032.
 9. When locating on-screen tap targets for `adb shell input tap`, prefer `adb shell uiautomator dump` for exact bounds over estimating from a scaled screenshot.
-10. When every available option for a phase carries a genuine, consequential downside (not just an ambiguous name), ask the user rather than picking one — see ADR-032's Context section for how this differed from Phase 018's more benign scoping question.
-11. Stop after Phase 020 (or its first sub-phase, if it needs splitting).
-12. Update this document with verified information only. If any static document changed, update DOCS_MANIFEST.json and START_HERE.md too.
+10. When every available option for a phase carries a genuine, consequential downside, ask the user rather than picking one — see ADR-032.
+11. When generating a codegen-backed native module, remember the generated Java/Kotlin spec class keeps the `Native` prefix from the `.ts` spec file's own name (e.g. `NativeFooSpec`, not `FooSpec`) — got this right on the first try this phase, after Phase 018 caught it the hard way.
+12. Stop after Phase 021 (or its first sub-phase, if it needs splitting).
+13. Update this document with verified information only. If any static document changed, update DOCS_MANIFEST.json and START_HERE.md too.
 
 ---
 
 ## Notes
 
-This session shipped no code — its real output was catching, before writing a single line, that Phase 019 as named ("Foreground Service") cannot currently be built honestly on Android 14+/15+ without either crashing (`specialUse` misuse) or silently violating Nova's own always-on vision (`dataSync`'s 6-hour cap). This is a different situation from every prior phase in this project: it's not a naming ambiguity (like Phase 017) or a scope-uncertainty (like Phase 018's permission choice) — every viable path forward had a real, consequential cost, which is exactly the kind of decision CLAUDE.md says to bring to the user rather than resolve unilaterally. The user chose to defer rather than accept a placeholder. PROJECT_ROADMAP.md and PROJECT_STATE.json now reflect this honestly — Phase 019 is marked Deferred, not Complete, and the project's phase counter moves to Phase 020, which does not depend on it.
+Phase 020 had a real scope fork worth resolving carefully: ADR-028 groups it with the just-deferred Phase 019 under the same `services/` package, so "Lifecycle Manager" could plausibly have meant something just as blocked as the Foreground Service. Asking first (rather than assuming last session's tentative note was correct) avoided either wasted work or a wrongly-deferred phase. Once resolved, this phase went smoothly — the first module built from scratch combining both proven bridge patterns (command + event) at once, zero compile errors (the Phase 018 codegen-naming lesson held), and on-device verification that exercised a genuine background/foreground cycle via the hardware Home button rather than just a cold launch.
 
 ## Resume Token
 
 STAGE=1
 
-PHASE=020
+PHASE=021
 
 STATUS=READY
 
-NEXT=Lifecycle Manager
+NEXT=Broadcast Receivers

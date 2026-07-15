@@ -78,10 +78,11 @@ Foreground Service
 
 Phase 020
 Lifecycle Manager
-⏭ Next — not blocked by Phase 019's deferral; likely scoped as a native Activity/process lifecycle tracker (foreground/background/destroy events via the Phase 017 event-emission pattern), independent of any foreground service. To be confirmed when actually planned.
+✅ Complete — native process-lifecycle tracker (ADR-033), confirmed independent of the deferred Foreground Service after asking the user to resolve a real scope fork. `services/LifecycleManager.kt` (plain Kotlin, wraps `ProcessLifecycleOwner`) + thin `bridge/LifecycleManagerModule.kt` TurboModule (registered in `BridgePackage`) combine both proven bridge patterns — `isInForeground()` command and `onLifecycleChanged` event — for the first time in one module. Gives future native engines (Voice, Notification, Accessibility, etc.) a way to observe foreground/background transitions directly, without depending on the RN bridge or `AppState`. Verified on the physical device with a real Home-button background/foreground round-trip; `DiagnosticsScreen` displayed the full event timeline with zero code changes
 
 Phase 021
 Broadcast Receivers
+⏭ Next
 
 Phase 022
 Device Information

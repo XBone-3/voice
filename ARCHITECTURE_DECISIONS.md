@@ -1583,6 +1583,59 @@ When Phase 026/027 (or whichever phase turns out to be first) needs a foreground
 
 ---
 
+# ADR-033
+
+## Lifecycle Manager: Native Process Lifecycle, Independent of the Deferred Foreground Service
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+PROJECT_ROADMAP.md names Phase 020 "Lifecycle Manager," and ADR-028 groups it with Phase 019 under the same `services/` package ("Foreground Service and other Android Services. Phase 019/020"). Given Phase 019 (Foreground Service) was just deferred (ADR-032), this phase's scope was genuinely ambiguous in a way that mattered: "Lifecycle Manager" could plausibly mean either (a) a native Activity/process lifecycle tracker, independent of any foreground service, or (b) lifecycle coordination *for* the (deferred, non-existent) Foreground Service itself — start/stop/restart/`START_STICKY` behavior — which would be just as blocked as Phase 019. Unlike Phase 018 (where the scope was already unambiguous from existing documents), this fork had real consequences, so the user was asked directly rather than assumed. Answer: (a), the app/process lifecycle tracker, independent of Phase 019.
+
+React Native's own `AppState` already exposes foreground/background to *JS* — per ADR-013's dependency-minimalism check ("can RN/Android already do this?"), building a JS-only duplicate would be pointless. The real gap: per ADR-002/ADR-007, most of Nova's future engines (Voice, Notification, Accessibility, Automation, Memory) will be substantially or entirely native Kotlin, and per ADR-006 will eventually run independent of whether the RN UI is even attached. Those engines need a way to observe process-level foreground/background transitions **from native code directly**, without a round-trip through JS/`AppState`. That's a genuinely different, non-redundant capability.
+
+### Decision
+
+- `android/app/src/main/java/com/voice/services/LifecycleManager.kt` — plain Kotlin object (ADR-028's `services/` package), no React Native dependency. Wraps `ProcessLifecycleOwner` (`androidx.lifecycle:lifecycle-process`) — confirmed already present transitively in the Gradle cache, and declared explicitly in `app/build.gradle` so it's on the compile classpath (Jetpack is explicitly named in the project's own tech stack, so this isn't a new dependency decision). `isInForeground()` reads `ProcessLifecycleOwner`'s **current** lifecycle state on every call (`currentState.isAtLeast(STARTED)`) rather than a manually tracked variable, avoiding any race between app startup and the first observer callback. `start(onForegroundChanged)` registers a `DefaultLifecycleObserver` exactly once, dispatched via `Handler(Looper.getMainLooper()).post {}` since `Lifecycle.addObserver()` requires the main thread and `NativeModule.initialize()` isn't guaranteed to run on it.
+- `android/app/src/main/java/com/voice/bridge/LifecycleManagerModule.kt` — a new, thin TurboModule (ADR-008), registered in the existing shared `BridgePackage`. Reuses both bridge patterns proven in Phase 016/017 in a single module for the first time: `isInForeground(): Promise<Boolean>` (command) and an `onLifecycleChanged` event (via `RCTDeviceEventEmitter`, the same mechanism ADR-030 verified), registered once in `initialize()`.
+- `src/nativeSpecs/NativeLifecycleManager.ts` / `src/services/lifecycle.ts` — follow the exact not-linked warn-and-recover pattern established by `bridgeInfo.ts`/`permissions.ts`.
+- `App.tsx` — both the command (`isInForeground()`, logged once on mount) and the event (`subscribeToLifecycle`, logged on every transition) are wired in, mirroring how Phase 016+017 together verified both patterns for `NativeBridgeInfo`. The mount effect's cleanup now unsubscribes from both memory-pressure and lifecycle events.
+
+Verified: 2 new Jest tests (`isInForeground`/`subscribeToLifecycle` not-linked paths, mirroring `permissions.test.ts`). Full regression: `eslint`/`prettier`/`tsc`/`jest` (11 suites, 40 tests) all pass, `gradlew assembleDebug` clean with zero warnings on the **first** build attempt this time — the codegen class-naming lesson from ADR-031 (`NativeXSpec`, not `XSpec`) was applied correctly from the start.
+
+**On-device verification, exercising a real background/foreground round-trip**: installed, launched — confirmed `'Lifecycle Manager OK — isInForeground: true'` (command) and `'App foregrounded'` (event) both logged correctly on launch. Pressed the hardware Home button to genuinely background the app — confirmed `'App backgrounded'` fired, alongside a bonus confirmation that Phase 017's `onMemoryPressure` event still fires correctly too (`level 20` = `TRIM_MEMORY_UI_HIDDEN`, the real signal Android sends when an app's UI becomes hidden). Relaunched the app — confirmed `'App foregrounded'` fired again. Navigated to `DiagnosticsScreen` and confirmed the full, correctly-ordered event timeline displayed with zero code changes to that screen, extending ADR-030's confirmation that its log-viewer design generalizes to new event sources. No crashes throughout.
+
+### Consequences
+
+Advantages
+
+Future native engines (Voice, Notification, Accessibility, Automation, Memory) now have a real, native-only way to observe app foreground/background transitions without depending on the RN bridge or `AppState` at all
+
+Correctly separates real Android lifecycle logic (`services/LifecycleManager.kt`, reusable directly by future native code) from the thin bridge surface (`bridge/LifecycleManagerModule.kt`), per ADR-028's package split and ADR-008 — the same separation Phase 018 established for permissions
+
+First module to combine both proven bridge patterns (command + event) from the start, rather than adding one in a later phase (as Phase 016→017 did for `NativeBridgeInfo`)
+
+Verified with a real Home-button background/foreground cycle on the physical device, not simulated
+
+Disadvantages
+
+`LifecycleManager.start()` only supports a single registered callback (the one `LifecycleManagerModule` registers) — fine today since there's exactly one consumer, but a future second native consumer (e.g. a real engine wanting its own direct native subscription, bypassing the bridge) will need this extended to support multiple listeners
+
+Tracks only process-level foreground/background (`ProcessLifecycleOwner`), not finer per-Activity granularity (`onCreate`/`onPause`/`onDestroy` individually) — acceptable since Nova is single-Activity and process-level is the granularity every anticipated future consumer actually needs; revisit only if a real need for finer granularity emerges
+
+### Future
+
+When a future native engine (most plausibly whichever phase finally builds the Foreground Service — Phase 026/027 per ADR-032) needs to react to lifecycle transitions from its own Kotlin code, it should call `services.LifecycleManager` directly rather than routing through the JS bridge and back. If `LifecycleManager.start()`'s single-callback limitation becomes a real blocker at that point, extend it to a listener list rather than reworking the whole class.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.

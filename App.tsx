@@ -17,6 +17,7 @@ import {
   subscribeToMemoryPressure,
 } from '@services/bridgeInfo';
 import { checkPermission } from '@services/permissions';
+import { isInForeground, subscribeToLifecycle } from '@services/lifecycle';
 
 enableScreens();
 
@@ -30,8 +31,21 @@ function App() {
       }
     });
 
-    const unsubscribe = subscribeToMemoryPressure(level => {
+    const unsubscribeMemoryPressure = subscribeToMemoryPressure(level => {
       logger.warn('App', `Memory pressure signaled — level ${level}`);
+    });
+
+    const unsubscribeLifecycle = subscribeToLifecycle(foreground => {
+      logger.info('App', `App ${foreground ? 'foregrounded' : 'backgrounded'}`);
+    });
+
+    isInForeground().then(foreground => {
+      if (foreground != null) {
+        logger.info(
+          'App',
+          `Lifecycle Manager OK — isInForeground: ${foreground}`,
+        );
+      }
     });
 
     // Status check only — never a request. Requesting RECORD_AUDIO here
@@ -44,7 +58,10 @@ function App() {
       );
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribeMemoryPressure();
+      unsubscribeLifecycle();
+    };
   }, []);
 
   return (

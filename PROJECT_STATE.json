@@ -1,8 +1,8 @@
 {
   "stage": 1,
-  "phase": 20,
+  "phase": 21,
   "status": "READY",
-  "last_completed": 18,
+  "last_completed": 20,
   "phase_019_status": "DEFERRED — see ADR-032; no valid Android 14+ foregroundServiceType exists until a real engine (likely Phase 026/027) justifies one",
   "build": "PASS",
   "lint": "PASS",
@@ -11,6 +11,6 @@
   "format": "PASS",
   "docs": "PASS",
   "device_verified": true,
-  "next": "Lifecycle Manager",
+  "next": "Broadcast Receivers",
   "last_verified": "2026-07-15"
 }
