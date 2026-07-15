@@ -58,10 +58,11 @@ Debug Screen
 
 Phase 015
 Architecture Validation
-⏭ Next
+✅ Complete — resolved Known Issue #2 (CLAUDE.md's self-conflicting native folder layouts) with a canonical `android/app/src/main/java/com/voice/` package plan (ADR-028); wrote `docs/architecture/overview.md`, the first real content there, validating Phases 001–014 against every relevant ADR/principle/NFR; full regression + confirmatory device launch, no code changes
 
 Phase 016
 Native Module Infrastructure
+⏭ Next — first native Kotlin phase; use the package layout from ADR-028
 
 Phase 017
 Turbo Module Setup

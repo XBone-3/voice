@@ -1299,6 +1299,71 @@ Phase 035 and beyond should extend `DiagnosticsScreen` with real per-engine metr
 
 ---
 
+# ADR-028
+
+## Native Kotlin Package Layout (Resolves Known Issue #2)
+
+Status
+
+Accepted — resolves the CLAUDE.md self-conflict flagged since Phase 005 (SESSION.md Known Issues #2)
+
+Date
+
+2026-07-15
+
+### Context
+
+CLAUDE.md contains two different native-code layouts that conflict with each other and were never reconciled:
+
+- Its "Folder Structure" section: `android/native/{voice,notification,accessibility,bridge}`
+- Its "Kotlin Structure" section: `android/{voice,notification,automation,memory,bridge,services,receivers,permissions,repository,utils}`
+
+Neither accounts for the real Gradle/Android constraint that Kotlin sources must live under `android/app/src/main/java/<package>/` to compile at all — `applicationId` is `com.voice` (per `android/app/build.gradle`; Known Issue #1 tracks that this hasn't been rebranded to Nova yet). PROJECT_MANIFEST.md's document conflict-resolution hierarchy doesn't help here, since both conflicting sections are inside CLAUDE.md itself — the hierarchy resolves conflicts *between* documents, not a document's self-contradiction. Per ARCHITECTURE_DECISIONS.md's own stated authority ("future contributors must read this before proposing architectural changes"), this ADR is the resolution — CLAUDE.md's own text is left untouched (its two conflicting sections are historical/aspirational, not something to silently edit), but going forward, this ADR governs where native code actually goes.
+
+Phase 016 (Native Module Infrastructure) is next and needs this decided before it can start.
+
+### Decision
+
+Canonical base path: **`android/app/src/main/java/com/voice/`**, then:
+
+```
+bridge/       — TurboModules, NativeModules, EventEmitters (ADR-008, thin bridge). Phase 016/017.
+permissions/  — Permission request/management helpers. Phase 018.
+services/     — Foreground Service and other Android Services. Phase 019/020.
+receivers/    — BroadcastReceivers. Phase 021.
+device/       — Device information helpers. Phase 022.
+repository/   — Repository Pattern data access (DataStore/Room, per CLAUDE.md's Code
+                Philosophy). Phase 023/024.
+eventbus/     — Internal cross-module event bus. Phase 025.
+utils/        — Shared utilities; no business logic of its own.
+```
+
+This adopts the "Kotlin Structure" section's naming (it's the more detailed, Kotlin-specific of the two) as the base, correcting it to sit under the real required Gradle path, and mapping each package to the specific near-term phase that will populate it.
+
+**Deliberately not decided yet:** top-level packages for the engine-specific work more than a few phases out — `voice/`, `wakeword/`, `command/`, `context/`, `notification/`, `accessibility/`, `automation/`, `memory/`, `plugin/`, `analytics/` (this last one meaning local performance/observability metrics per NON_FUNCTIONAL_REQUIREMENTS.md's Observability section, not third-party tracking — that would violate the no-cloud-dependencies policy). PROJECT_ROADMAP.md spreads these across Phases 026–090; specifying their internal package structure now, 10+ phases ahead of the work, would be exactly the kind of speculative architecture this project's own discipline (applied consistently since Phase 005's folder-structure and Phase 009's token-catalog scoping) argues against. Each gets its own top-level package when its own dedicated phase begins.
+
+No folders were created this phase — Gradle/git don't track empty directories, and Phase 016 is what actually populates `bridge/` with real content. This ADR is the decision; Phase 016 does the creating.
+
+### Consequences
+
+Advantages
+
+Phase 016 has an unambiguous, real (Gradle-compatible) path to build against
+
+Resolves a documentation conflict that had been carried forward, unaddressed, across 10 prior phases (005–014)
+
+Avoids over-specifying package structure for engines 10+ phases away
+
+Disadvantages
+
+CLAUDE.md's own two conflicting sections remain textually unedited — a future reader skimming only CLAUDE.md (not this ADR) could still be misled. Mitigated by this ADR being referenced from SESSION.md's Known Issues resolution and from Architecture Status going forward.
+
+### Future
+
+As each engine's dedicated phase begins (026 onward), add its top-level package here via a short ADR amendment (not a full new ADR) rather than deciding all of them speculatively now.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.

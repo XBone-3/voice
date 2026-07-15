@@ -36,11 +36,11 @@ TypeScript (`npx tsc --noEmit`)
 
 Unit Tests (`npx jest`)
 
-✅ Passing (8 suites, 33 tests)
+✅ Passing (8 suites, 33 tests — unchanged this phase, no code touched)
 
 Physical Device
 
-✅ Verified — full interactive log-viewer test performed this session (see Testing)
+✅ Verified — confirmatory launch this session, no crashes (see Testing)
 
 Documentation
 
@@ -52,55 +52,49 @@ Documentation
 
 Current Stage
 
-Stage 1 — Foundation
+Stage 1 — Foundation (last phase of this stage; Phase 016 begins native Kotlin work — no formal "Stage 2" name has been defined in any document, so none is invented here; revisit stage naming once native work has enough shape to name)
 
 Current Phase
 
-Phase 015
+Phase 016
 
-Architecture Validation
+Native Module Infrastructure
 
 Last Completed
 
-Phase 014
+Phase 015
 
-Debug Screen — `DiagnosticsScreen` shows a real, working log viewer over Phase 013's `logger`; added a general-purpose `Button` component; first real use of the `error`/`secondary`/`outline` color tokens (ADR-027)
+Architecture Validation — resolved Known Issue #2 (native folder layout, ADR-028); wrote `docs/architecture/overview.md`; validated Phases 001–014 against every applicable ADR/principle/NFR; no code changes
 
 Completion
 
-14 / 100 Phases
+15 / 100 Phases
 
 ---
 
 ## Current Objective
 
-Phase 015 will validate the architecture built across Phases 001–014 against ARCHITECTURE_DECISIONS.md/ENGINEERING_PRINCIPLES.md/NON_FUNCTIONAL_REQUIREMENTS.md before Phase 016 starts native module work — likely a review/audit phase rather than new features, given "Architecture Validation" sits right before the native-module boundary.
+Phase 016 (Native Module Infrastructure) is the first phase to write real Kotlin. Per ADR-028 (this session), it should create `android/app/src/main/java/com/voice/bridge/` as its first package, establishing the TurboModule/NativeModule registration pattern the rest of the native engines will follow.
 
 ---
 
 ## Completed This Session
 
-✔ Gave `DiagnosticsScreen` its first real content: a header (title + Refresh/Clear) and a `FlatList` log viewer over `logger.getEntries()`, most-recent-first, with an empty state
+✔ **Resolved Known Issue #2** — CLAUDE.md's two self-conflicting native-layout sections. ADR-028 establishes the canonical, Gradle-compatible base path (`android/app/src/main/java/com/voice/`) and maps near-term packages (`bridge/`, `permissions/`, `services/`, `receivers/`, `device/`, `repository/`, `eventbus/`, `utils/`) to their specific upcoming phases (016–025). Deliberately did **not** pre-specify packages for engines 10+ phases out (voice/command/notification/etc., Phases 026+) — matches this project's established discipline against speculative architecture
 
-✔ Used `useFocusEffect` (React Navigation, already a dependency) to refresh on screen focus — no polling, per ENGINEERING_PRINCIPLES.md's battery guidance
+✔ Wrote `docs/architecture/overview.md` — first real content for a directory empty since Phase 001. Documents the current module map (`env`/`logger`/`theme`/`stores`/`components`/`navigation`/`screens`), the current (native-free) data flow, the full path-alias list, a dependency audit (every runtime dependency cross-referenced to the ADR that justifies it), and a validation table against every applicable ADR-001 through ADR-015
 
-✔ Color-coded log rows by level: `error` → `theme.colors.error`, `warn` → `theme.colors.secondary`, `info`/`debug` → default text; row separators use `theme.colors.outline`. **First real, honest use of `error`/`secondary`/`outline`** — flagged as unconsumed since Phase 009/ADR-023
+✔ Validated against NON_FUNCTIONAL_REQUIREMENTS.md and found one genuine, previously-untracked gap: **accessibility has never been explicitly audited** (TalkBack, dynamic font scaling, contrast) — added as a new Known Issue rather than silently noted only in the architecture doc
 
-✔ Added `src/components/Button.tsx` — a generic action button, finally resolving the "no general-purpose Button" gap flagged since ADR-023/024/025. Deliberately kept separate from `MenuLink` despite similar styling, rather than refactoring Phase 010's already-verified code for a minor DRY gain
-
-✔ Added 6 new tests; mocked `useFocusEffect` as a plain `useEffect` for focused unit testing (standard pattern, since it needs a real navigation context to run normally); found and removed one overly fragile test assertion rather than patching it, since the behavior it targeted was already covered elsewhere
-
-✔ **Full interactive on-device verification**: rebuilt, installed, launched, navigated Home → Settings, toggled the theme override twice (generating real `ThemeProvider` log entries), navigated to Diagnostics, confirmed via screenshot all 4 real entries appeared correctly ordered with correct tags/timestamps. Tapped Clear, confirmed the empty state. One real navigation slip along the way (hardware back from Home — the stack root — exits the app; expected behavior, not a bug, just corrected the test approach to use the header back arrow instead)
-
-✔ Full regression: `eslint`, `prettier --check`, `tsc --noEmit`, `jest`, `gradlew assembleDebug` — all pass
+✔ No code changes this phase — pure documentation/validation. Ran the full regression suite anyway (rather than skip it because "nothing changed") to make sure the "known good state" this phase claims is actually true, not just asserted: `eslint`/`prettier`/`tsc`/`jest` all pass, `gradlew assembleDebug` succeeds, and did a confirmatory device install+launch (no crashes) — validation phases should validate, not just assert
 
 ---
 
 ## Pending
 
-Phase 015 — Architecture Validation
+Phase 016 — Native Module Infrastructure (first native Kotlin phase)
 
-Phase 016 onward — per PROJECT_ROADMAP.md, none started (Phase 016 begins native module work)
+Phase 017 onward — per PROJECT_ROADMAP.md, none started
 
 ---
 
@@ -114,26 +108,28 @@ None.
 
 1. App identity is still CLI default: `package.json` name is `"Voice"`, Android `applicationId` is `com.voice`, no "Nova" branding, icons, or naming has been applied yet.
 
-2. **Open architectural conflict, to resolve at Phase 016 (Native Module Infrastructure):** CLAUDE.md's own "Folder Structure" section and its separate "Kotlin Structure" section describe two different, inconsistent layouts for native engine code, and neither accounts for the real Gradle constraint that Kotlin sources must live under `android/app/src/main/java/com/voice/...` to compile. Still unresolved — Phase 015 (Architecture Validation) is the natural place to at least explicitly plan the resolution before Phase 016 needs it.
+2. ~~Open architectural conflict re: native folder layout~~ — **Resolved this session.** See ADR-028: canonical path is `android/app/src/main/java/com/voice/`, packages mapped to Phases 016–025.
 
 3. `FEATURES` in `src/env/index.ts` (ADR-019) must be updated by hand as each engine's phases complete — nothing currently enforces that a flag reflects reality.
 
 4. The six not-yet-enabled screens remain README-only with no component and no registered route — intentional (ADR-019/ADR-020), not an oversight.
 
-5. The theme preference does not persist across app restarts (ADR-024) — deliberate, temporary, until Phase 016/023/024 exist.
+5. The theme preference does not persist across app restarts (ADR-024) — deliberate, temporary, until Phase 016/023/024 exist. Note: Phase 016 (native infra) begins now, but persistence itself is still Phase 023/024's job specifically.
 
 6. Logger has no content-based redaction yet (ADR-026) — a documented convention, not enforced in code.
 
-7. `Button` and `MenuLink` (`src/components/`) duplicate similar Pressable+ripple styling — a deliberate, small, accepted tradeoff (ADR-027), not an oversight.
+7. `Button` and `MenuLink` (`src/components/`) duplicate similar Pressable+ripple styling — a deliberate, small, accepted tradeoff (ADR-027).
+
+8. **New this session:** Accessibility (TalkBack, dynamic font scaling, contrast) has never been explicitly audited across the 4 real screens/5 components built so far. NON_FUNCTIONAL_REQUIREMENTS.md and ENGINEERING_PRINCIPLES.md both require this. Not urgent (Phase 094 "Accessibility Improvements" exists later in the roadmap), but flagging now rather than let it go unnoticed further — a lightweight pass before Stage 1 fully closes would be worthwhile.
 
 ---
 
 ## Technical Debt
 
 - App branding/identity not yet applied (see Known Issues #1).
-- Native Kotlin folder layout undecided (see Known Issues #2) — due for resolution by/before Phase 016.
-- Alias definitions still require keeping two files in sync by hand (`babel.config.js`, `tsconfig.json`) — now 10 aliases.
-- Settings persistence is a known, explicit gap until Phase 016/023/024 (see Known Issues #5).
+- Alias definitions still require keeping two files in sync by hand (`babel.config.js`, `tsconfig.json`) — 10 aliases.
+- Settings persistence is a known, explicit gap until Phase 023/024 (see Known Issues #5).
+- Accessibility unaudited (see Known Issues #8).
 
 ---
 
@@ -155,8 +151,6 @@ ADB
 
 Verified — `adb devices` reports `10BEAG3HR7003TF	device`
 
-This session performed the most thorough interactive test yet: multi-screen navigation, generating real state changes, and observing their effects surface correctly in a dedicated diagnostics view.
-
 ---
 
 ## Testing
@@ -173,17 +167,15 @@ Tests Performed
 
 ✔ `npx tsc --noEmit` — pass
 
-✔ `npx jest` — pass (8 suites, 33 tests)
+✔ `npx jest` — pass (8 suites, 33 tests, unchanged — no test code touched this phase)
 
 ✔ `cd android && ./gradlew assembleDebug` — BUILD SUCCESSFUL
 
-✔ Installed and launched on device; navigated Home → Settings → toggled theme twice → Diagnostics; confirmed all 4 real log entries displayed correctly; Clear confirmed working
-
-✔ `adb logcat -d -t 3000` — no crashes across the session
+✔ Installed and launched on device; confirmed no crashes via `adb logcat -d -t 3000` — a confirmatory check since no functional code changed, done anyway per this phase's own "validate, don't just assert" principle
 
 Pending
 
-No voice, wake word, or speech recognition code exists yet.
+No voice, wake word, or speech recognition code exists yet. Accessibility audit (Known Issues #8) not yet performed.
 
 ---
 
@@ -195,13 +187,13 @@ Repository state matches:
 
 ✔ CLAUDE.md
 
-✔ ARCHITECTURE_DECISIONS.md ADR-016 through ADR-026, plus ADR-027 (new)
+✔ ARCHITECTURE_DECISIONS.md ADR-016 through ADR-027, plus ADR-028 (new — resolves Known Issue #2)
 
-✔ `src/screens/diagnostics/README.md` (Phase 005) — log-viewer portion now fulfilled; engine metrics correctly deferred to Phase 035+
+✔ Full ADR-by-ADR validation performed and documented in `docs/architecture/overview.md` (ADR-001 through ADR-015)
 
 Repository state conflicts with:
 
-None currently open at the React Native layer. See Known Issues #2 for the unresolved native-layer documentation conflict, scoped to Phase 016 — Phase 015 (next) should address this before it's needed.
+None open. The only previously-tracked conflict (native folder layout, Known Issue #2) is resolved as of this session.
 
 ---
 
@@ -213,7 +205,7 @@ README
 
 Roadmap
 
-✅ Updated — Phase 014 marked complete, Phase 015 marked next
+✅ Updated — Phase 015 marked complete, Phase 016 marked next
 
 Session
 
@@ -221,31 +213,31 @@ Session
 
 ADR
 
-✅ Updated — ADR-027 added
+✅ Updated — ADR-028 added
 
 Architecture Docs
 
-❌ `docs/architecture/` exists but is empty — Phase 015 (Architecture Validation) may be the natural place to start this
+✅ **New this session** — `docs/architecture/overview.md` written, first real content since the directory was created in Phase 001
 
 ---
 
 ## Next Phase
 
-Phase 015
+Phase 016
 
-Architecture Validation
+Native Module Infrastructure
 
 Goal
 
-Validate the architecture built across Phases 001–014 against ARCHITECTURE_DECISIONS.md, ENGINEERING_PRINCIPLES.md, and NON_FUNCTIONAL_REQUIREMENTS.md before Phase 016 starts native module work. Likely scope: an audit/documentation phase (possibly the first real content for `docs/architecture/`), and should explicitly resolve or at least formally plan the Known Issues #2 native-folder-layout conflict, since Phase 016 will need that decision made.
+First native Kotlin phase. Establish the TurboModule/NativeModule registration pattern under `android/app/src/main/java/com/voice/bridge/` (ADR-028), which every subsequent native engine will use to expose functionality to React Native. This is a significant complexity step-up from Phases 001–015 (all JS-side) — expect this to need careful, incremental sub-steps (matching how Phases 003/005/007 were split when they turned out to be too large for one shot).
 
 Dependencies
 
-Phase 014 (Debug Screen) — complete; this is the last Stage 1 phase before native module work begins
+Phase 015 (Architecture Validation) — complete; ADR-028 provides the package layout this phase builds against
 
 Expected Duration
 
-Medium
+Large — likely needs splitting into sub-phases once concretely planned, given it's the first crossing into native code
 
 ---
 
@@ -255,24 +247,24 @@ When starting a new session:
 
 1. Read START_HERE.md and DOCS_MANIFEST.json first (hash-check protocol). Only re-read a static document in full if its hash no longer matches.
 2. Always read all four dynamic documents in full: SESSION.md (this file), PROJECT_STATE.json, PROJECT_ROADMAP.md, ARCHITECTURE_DECISIONS.md.
-3. Verify repository health against the actual files and toolchain. Where a phase changes runtime/visual/interactive behavior, verify on the physical device — do not rely on `tsc`/`jest` alone. Remember: hardware back from a stack's root screen exits the app — use the in-app back arrow when testing single-screen pops.
-4. Continue from Phase 015.
+3. Verify repository health against the actual files and toolchain. Phase 016 is the first native-Kotlin phase — expect Android Studio/Gradle-level verification (not just `tsc`/`jest`) to become newly relevant, and plan for physical-device testing of native code specifically, not just the JS bridge surface.
+4. Continue from Phase 016.
 5. Do not redesign previous phases.
-6. Stop after Phase 015.
+6. Stop after Phase 016 (or its first sub-phase, if it needs splitting — likely, given its complexity).
 7. Update this document with verified information only. If any static document changed, update DOCS_MANIFEST.json and START_HERE.md too.
 
 ---
 
 ## Notes
 
-Phase 014 closed out Stage 1's remaining UI-polish gaps (Button component, error/secondary/outline tokens) through genuine need rather than by forcing them in — both had sat honestly-flagged-as-unused for 2-3 phases until a real requirement (a log viewer with leveled entries) called for them naturally. Phase 015 is the last phase before Phase 016 crosses into native Kotlin work, making it a natural checkpoint to resolve the long-standing Known Issue #2 (native folder layout conflict) before it becomes blocking.
+Phase 015 deliberately made zero code changes — its entire value is in resolving a real documentation conflict (ADR-028) and writing down what's actually true (`docs/architecture/overview.md`) rather than adding features. Still ran the full regression suite and a confirmatory device launch anyway, on the principle that a validation phase should actually validate its own claims rather than assume them. Found one genuine new gap (accessibility, never audited) that hadn't been tracked before — added honestly rather than glossed over, consistent with how every other phase this project has handled discovered gaps.
 
 ## Resume Token
 
 STAGE=1
 
-PHASE=015
+PHASE=016
 
 STATUS=READY
 
-NEXT=Architecture Validation
+NEXT=Native Module Infrastructure
