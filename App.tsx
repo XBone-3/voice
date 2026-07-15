@@ -12,7 +12,10 @@ import RootNavigator from '@navigation/RootNavigator';
 import { toNavigationTheme } from '@navigation/theme';
 import { ThemeProvider, useTheme } from '@theme';
 import { logger } from '@logger';
-import { getAndroidVersion } from '@services/bridgeInfo';
+import {
+  getAndroidVersion,
+  subscribeToMemoryPressure,
+} from '@services/bridgeInfo';
 
 enableScreens();
 
@@ -25,6 +28,11 @@ function App() {
         logger.info('App', `Native bridge OK — Android ${androidVersion}`);
       }
     });
+
+    const unsubscribe = subscribeToMemoryPressure(level => {
+      logger.warn('App', `Memory pressure signaled — level ${level}`);
+    });
+    return unsubscribe;
   }, []);
 
   return (

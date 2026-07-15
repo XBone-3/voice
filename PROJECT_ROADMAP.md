@@ -66,10 +66,11 @@ Native Module Infrastructure
 
 Phase 017
 Turbo Module Setup
-⏭ Next
+✅ Complete — added the event-emission half of ADR-008's "commands, events, state" bridge triad (Phase 016 delivered commands only). `NativeBridgeInfo` gained `addListener`/`removeListeners` plus a real `ComponentCallbacks2.onTrimMemory()`-backed `onMemoryPressure` event (ADR-030) — a genuine Android system signal, not a synthetic demo, chosen because it ties to NON_FUNCTIONAL_REQUIREMENTS.md's Memory section and isn't duplicated by any existing RN API. `services/bridgeInfo.ts` gained `subscribeToMemoryPressure()`; wired into `App.tsx`, logged via the existing logger with zero changes needed to `DiagnosticsScreen`'s log viewer. Verified on the physical device with a real OS-level trigger (`adb shell am send-trim-memory`), not an in-app simulation — confirmed the event arrives and displays correctly
 
 Phase 018
 Permission Manager
+⏭ Next
 
 Phase 019
 Foreground Service

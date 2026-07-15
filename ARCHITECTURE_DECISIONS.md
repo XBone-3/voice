@@ -1421,6 +1421,61 @@ If native modules ever behave inconsistently again after multiple same-session r
 
 ---
 
+# ADR-030
+
+## Turbo Module Setup: Native-to-JS Event Emission
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+PROJECT_ROADMAP.md names Phase 017 "Turbo Module Setup," but Phase 016 ("Native Module Infrastructure") already built and device-verified a complete, working TurboModule — registration pattern, codegen, and a real call-and-return method (`getAndroidVersion()`). Unlike most prior phases, no Phase-005 screen README or earlier ADR note disambiguated what 017 specifically adds on top of that. Rather than guess between "invent a new capability" and "harden what already exists" — either of which risks either speculative/fabricated feature work or redundant no-op work, both of which CLAUDE.md explicitly warns against — the user was asked directly. Answer: build the event-emission half of the bridge.
+
+ADR-008 ("Thin Bridge") defines the bridge as carrying **commands, events, and state**. Phase 016 delivered commands only (a call that returns a value). This phase adds native → JS events — a `NativeEventEmitter`-based subscription, the standard React Native mechanism, completing the triad before Phase 018 (Permission Manager) and later phases (019 Foreground Service, 020 Lifecycle Manager, 021 Broadcast Receivers) need to push native-initiated notifications to JS.
+
+The remaining design question was which event to build the pattern around. Building a fake/synthetic event (e.g., a manually-fired "bridge ready" signal) would be exactly the kind of proof-of-concept-only, no-real-consumer code CLAUDE.md and this project's own established discipline (ADR-019, ADR-023, ADR-028) consistently avoid. `ComponentCallbacks2.onTrimMemory()` was chosen instead: a genuine Android system callback (fires on real OS-reported memory pressure), not duplicated by any existing RN API (`AppState` covers foreground/background only, nothing about memory), independently triggerable for verification via Android's own `adb shell am send-trim-memory` tool (not a simulation written by this project), and it gives NON_FUNCTIONAL_REQUIREMENTS.md's Memory section (background service memory limits, "no leaks") a real signal to react to, rather than inventing an unrelated demo event.
+
+### Decision
+
+- `src/nativeSpecs/NativeBridgeInfo.ts` — `Spec` gains `addListener(eventName: string): void` and `removeListeners(count: number): void`, the standard boilerplate `NativeEventEmitter` requires of any event-emitting native module's JS-visible interface.
+- `android/.../NativeBridgeInfoModule.kt` — implements `addListener`/`removeListeners` as no-ops (Android needs no explicit listener bookkeeping, unlike iOS — this is the standard, documented pattern). The module itself implements `ComponentCallbacks2`, registered via `reactApplicationContext.registerComponentCallbacks(this)` in the `initialize()` lifecycle hook and unregistered via `unregisterComponentCallbacks(this)` in `invalidate()` — paired registration/cleanup specifically to avoid the leaked-callback/retained-context problem NON_FUNCTIONAL_REQUIREMENTS.md's Reliability section warns about. `onTrimMemory(level)` emits `"onMemoryPressure"` (payload: the raw trim level) via `reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java).emit(...)` — the same mechanism used internally by React Native's own core modules (confirmed by reading `ReactContext.java`), not a novel or exotic API.
+- `src/services/bridgeInfo.ts` — new `subscribeToMemoryPressure(callback): () => void`, wrapping `NativeEventEmitter(NativeBridgeInfo)`. Returns a no-op unsubscribe and logs a warning (matching `getAndroidVersion()`'s existing not-linked handling) if the module isn't available, rather than throwing.
+- `App.tsx` — subscribes on mount alongside the existing bridge check, logging each event via the existing `logger` (`"Memory pressure signaled — level N"`), and returns the unsubscribe function from the effect for proper cleanup. This gives the event a real, immediate consumer: `DiagnosticsScreen`'s existing log viewer (ADR-027) displays it with no changes to that screen at all, since it already renders whatever lands in the logger.
+
+Verified: 1 new Jest test (`subscribeToMemoryPressure` logs a warning and returns a safe no-op unsubscribe when the module isn't linked, e.g. in Jest). Full regression pass (`eslint`/`prettier`/`tsc`/`jest`, 9 suites, 35 tests) and a clean `gradlew assembleDebug` with zero warnings.
+
+**On-device verification, using a real Android system mechanism rather than an in-app simulation**: installed, launched, confirmed the existing command pattern still works (`'Native bridge OK — Android 16'`), then ran `adb shell am send-trim-memory com.voice RUNNING_CRITICAL` — confirmed via `adb logcat` that `'[App] Memory pressure signaled — level 15'` (15 = the real `TRIM_MEMORY_RUNNING_CRITICAL` constant value) was received and logged within ~200ms. Navigated to `DiagnosticsScreen` and confirmed the entry appears correctly, color-coded as a warning, with correct timestamp and tag, no code changes needed to that screen. No crashes.
+
+### Consequences
+
+Advantages
+
+Completes ADR-008's "commands, events, state" bridge triad — both halves (call-and-return, native-initiated push) are now proven patterns future engine phases can follow
+
+The chosen event is genuinely useful (ties to a documented NFR concern) rather than a synthetic proof-of-concept with no real consumer
+
+Verified with a real OS-level trigger (`adb shell am send-trim-memory`), not a simulated/fake event fired from within the app's own code
+
+`DiagnosticsScreen` required zero changes to display the new event — confirms ADR-027's log-viewer design was general enough to absorb new event sources
+
+Disadvantages
+
+`onMemoryPressure` currently only reaches the logger — no engine yet reacts to it (e.g. by reducing its own memory footprint). Acceptable: no memory-sensitive engine exists yet: this phase's job was proving the event pattern, not building a memory-response policy
+
+Android's `adb shell am send-trim-memory` only allows escalating trim levels within a single session (attempting a lower level after a higher one throws `IllegalArgumentException`) — a testing-tool quirk, not a limitation of the implementation; noted here so a future session doesn't waste time on it
+
+### Future
+
+When a future engine phase (most plausibly one from Phase 026 onward, or the Memory Engine phases 067–072) needs to react to memory pressure rather than just log it, subscribe via `subscribeToMemoryPressure` from that engine rather than adding response logic to `App.tsx` or `bridgeInfo.ts` — both should stay thin per ADR-008.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.
