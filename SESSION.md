@@ -38,6 +38,10 @@ Unit Tests (`npx jest`)
 
 ✅ Passing (2 suites, 4 tests)
 
+Physical Device
+
+✅ Verified — built, installed, launched, and navigated on the connected device this session (see Testing)
+
 Documentation
 
 ✅ Updated
@@ -52,45 +56,55 @@ Stage 1 — Foundation
 
 Current Phase
 
-Phase 007
+Phase 008
 
-Navigation
+Theme System
 
 Last Completed
 
-Phase 006
+Phase 007
 
-Environment Configuration — `src/env/index.ts` with `IS_DEV` and a per-engine `FEATURES` flag map (ADR-019)
+Navigation — React Navigation wired across Home/Settings/Developer/Diagnostics, gated by `FEATURES`; a real Metro alias bug was found and fixed along the way (ADR-020)
 
 Completion
 
-6 / 100 Phases
+7 / 100 Phases
 
 ---
 
 ## Current Objective
 
-Phase 007 will wire up React Navigation across the ten screens created in Phase 005 (`src/screens/*`), reading `FEATURES` from Phase 006 to decide which are actually reachable. This is also the first phase expected to exercise Metro-bundler-level alias resolution in a running app (ADR-018 noted this was only Jest/tsc-verified so far).
-
-No voice, command, notification, accessibility, or automation code exists yet. `App.tsx` remains at the repository root, still the CLI default — Phase 007 is where it starts using the new structure.
+Phase 008 will introduce Material 3 design tokens and theming (ADR-009) — the four screens built in Phase 007 currently use raw inline `StyleSheet` values with no shared theme.
 
 ---
 
 ## Completed This Session
 
-✔ Phase 006 — Environment Configuration. Since Nova has no backend or secrets to configure (no cloud AI, per CLAUDE.md's ABSOLUTE RULES), scoped this to what's actually needed now: `src/env/index.ts` exporting `IS_DEV` (a direct alias of RN's `__DEV__`) and `FEATURES`, a typed map gating each engine-backed screen until its engine is built. Added the `@env` alias alongside the existing eight (ADR-018 pattern). 3 new permanent tests added and passing. Recorded as ADR-019
+✔ Installed `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens`; removed the now-unused `@react-native/new-app-screen` dependency
 
-✔ Built the documentation-versioning system requested this session: **DOCS_MANIFEST.json** (hash ledger for all 10 project documents, static vs. dynamic categorized) and a rewritten **START_HERE.md** (the actual session bootstrap: protocol + condensed summaries of all 6 static documents, so a new session skips re-reading them in full unless their hash changed). Updated PROJECT_MANIFEST.md's "Required Project Documents" and "Claude Code Startup Procedure" sections to point at this new protocol instead of "read all 9 documents every time." This is process tooling, not a numbered roadmap phase — it doesn't renumber PROJECT_ROADMAP.md
+✔ Created `src/navigation/types.ts` (typed `RootStackParamList`, all 10 screens) and `src/navigation/RootNavigator.tsx`, which registers `Home`/`Settings` unconditionally and `Developer`/`Diagnostics` only when `FEATURES` (Phase 006, ADR-019) enables them
 
-✔ Full regression check: `npx eslint .`, `npx prettier --check .`, `npx tsc --noEmit`, `npx jest`, `cd android && ./gradlew assembleDebug` — all pass
+✔ Built real screen components for the four currently-reachable screens (`HomeScreen`, `SettingsScreen`, `DeveloperScreen`, `DiagnosticsScreen`) with barrel `index.ts` files; the other six screens remain README-only until their engine's `FEATURES` flag flips on, per ADR-019's own design — no dead/unreachable code was added
+
+✔ Rewrote `App.tsx` to render `NavigationContainer` + `RootNavigator` instead of the CLI's default `NewAppScreen`
+
+✔ Fixed a real Jest gap: `@react-navigation`/`react-native-screens` ship ESM and needed `transformIgnorePatterns` extended, or Jest failed on `export` syntax
+
+✔ **Found and fixed a real bug via physical-device testing**, exactly the scenario ADR-018 flagged as unverified: Metro's built-in `resolver.extraNodeModules` cannot resolve `@alias/subpath` imports — it parses any `@word/segment` specifier as one atomic npm-style scoped package name with no subpath, confirmed by reading `metro-resolver`'s source directly. Replaced it with `babel-plugin-module-resolver` in `babel.config.js`; removed the now-dead `extraNodeModules` block from `metro.config.js` and `moduleNameMapper` from `jest.config.js`. Recorded as ADR-020, which supersedes the Metro-side half of ADR-018
+
+✔ Along the way, hit and resolved two environment issues unrelated to the code itself: (1) a stale Gradle daemon lock caused by an earlier background build colliding with the user's own terminal attempt — resolved with `gradlew --stop`; (2) `TaskStop` on a background Metro process did not actually kill the underlying Windows `node.exe`, causing a stale server to keep serving a cached bundle after a "restart" — resolved by finding and force-killing the PID bound to port 8081 directly
+
+✔ **Full on-device verification**: built (`gradlew assembleDebug`, BUILD SUCCESSFUL), installed via `adb install -r`, launched via `adb shell am start`, confirmed no crashes/errors via `adb logcat` (`AndroidRuntime:E`, `ReactNativeJS:V`), and visually confirmed via `adb shell screencap` screenshots that: Home renders with the Nova title and all four links, tapping "Settings" navigates with a native-stack transition, and the hardware back button returns to Home
+
+✔ Full regression: `eslint`, `prettier --check`, `tsc --noEmit`, `jest`, `gradlew assembleDebug` — all pass after every change in this phase
 
 ---
 
 ## Pending
 
-Phase 007 — Navigation
+Phase 008 — Theme System
 
-Phase 008 onward — per PROJECT_ROADMAP.md, none started
+Phase 009 onward — per PROJECT_ROADMAP.md, none started
 
 ---
 
@@ -104,9 +118,11 @@ None.
 
 1. App identity is still CLI default: `package.json` name is `"Voice"`, Android `applicationId` is `com.voice`, no "Nova" branding, icons, or naming has been applied yet.
 
-2. **Open architectural conflict, to resolve at Phase 016 (Native Module Infrastructure):** CLAUDE.md's own "Folder Structure" section (`android/native/{voice,notification,accessibility,bridge}`) and its separate "Kotlin Structure" section (`android/{voice,notification,automation,memory,bridge,services,receivers,permissions,repository,utils}`) describe two different, inconsistent layouts for native engine code, and neither accounts for the real Gradle constraint that Kotlin sources must live under `android/app/src/main/java/com/voice/...` to compile. Still unresolved; flagged so Phase 016 doesn't miss it.
+2. **Open architectural conflict, to resolve at Phase 016 (Native Module Infrastructure):** CLAUDE.md's own "Folder Structure" section and its separate "Kotlin Structure" section describe two different, inconsistent layouts for native engine code, and neither accounts for the real Gradle constraint that Kotlin sources must live under `android/app/src/main/java/com/voice/...` to compile. Still unresolved; flagged so Phase 016 doesn't miss it.
 
-3. `FEATURES` in `src/env/index.ts` (ADR-019) must be updated by hand as each engine's phases complete — nothing currently enforces that a flag reflects reality. Acceptable for now; revisit only if flags start drifting from actual engine status.
+3. `FEATURES` in `src/env/index.ts` (ADR-019) must be updated by hand as each engine's phases complete — nothing currently enforces that a flag reflects reality.
+
+4. The six not-yet-enabled screens (`assistant`, `notifications`, `automation`, `memory`, `history`, `plugins`) remain README-only with no component and no registered route. This is intentional (ADR-019/ADR-020), not an oversight — they get built out when their engine's `FEATURES` flag flips on.
 
 ---
 
@@ -114,8 +130,8 @@ None.
 
 - App branding/identity not yet applied (see Known Issues #1).
 - Native Kotlin folder layout undecided (see Known Issues #2).
-- Alias definitions are duplicated by hand across `metro.config.js`, `tsconfig.json`, and `jest.config.js` (ADR-018) — 9 aliases now, still acceptable.
-- Metro-bundler-level alias resolution has only been verified via Jest/tsc, not inside a running app yet — due for real exercise in Phase 007.
+- Alias definitions still require keeping two files in sync by hand (`babel.config.js`, `tsconfig.json`) — down from three after ADR-020, but not eliminated.
+- Screens have zero shared theming yet (raw `StyleSheet` values) — this is exactly Phase 008's job.
 
 ---
 
@@ -137,7 +153,7 @@ ADB
 
 Verified — `adb devices` reports `10BEAG3HR7003TF	device`
 
-Note: Phase 006 and the documentation-versioning work were both JS/config/docs only — no app behavior changed, so no device-level functional testing applies this session. The Android build was regression-checked (BUILD SUCCESSFUL).
+This session performed real, full device verification for the first time (previous phases were JS-tooling-only): build → install → launch → logcat check → screenshot → tap navigation → back-button navigation, all confirmed working.
 
 ---
 
@@ -155,13 +171,38 @@ Tests Performed
 
 ✔ `npx tsc --noEmit` — pass
 
-✔ `npx jest` — pass (2 suites, 4 tests: `App.test.tsx`, new `env.test.ts`)
+✔ `npx jest` — pass (2 suites, 4 tests)
 
 ✔ `cd android && ./gradlew assembleDebug` — BUILD SUCCESSFUL
 
+✔ `adb install -r app-debug.apk` — Success
+
+✔ `adb shell am start -n com.voice/.MainActivity` — launched without crash
+
+✔ `adb logcat -d AndroidRuntime:E` / `ReactNativeJS:V` — no fatal crashes, no JS console errors
+
+✔ Screenshot-verified: Home screen renders correctly; tap navigation to Settings works with native transition; hardware back button returns to Home
+
+ADB commands used this session
+
+```
+adb devices
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+adb reverse tcp:8081 tcp:8081
+adb shell am force-stop com.voice
+adb logcat -c
+adb shell am start -n com.voice/.MainActivity
+adb logcat -d AndroidRuntime:E *:S
+adb logcat -d ReactNativeJS:V *:S
+adb shell screencap -p /sdcard/<file>.png
+adb pull /sdcard/<file>.png ./<file>.png   # MSYS_NO_PATHCONV=1 needed in Git Bash
+adb shell input tap <x> <y>
+adb shell input keyevent KEYCODE_BACK
+```
+
 Pending
 
-No voice, wake word, or speech recognition code exists yet. Metro-bundler-level (not just Jest/tsc) alias resolution remains to be exercised — expected in Phase 007.
+No voice, wake word, or speech recognition code exists yet.
 
 ---
 
@@ -171,17 +212,15 @@ Repository state matches:
 
 ✔ PROJECT_MANIFEST.md platform policy
 
-✔ CLAUDE.md (phases followed in order; this session was explicitly pre-approved to implement directly without a separate approval gate)
+✔ CLAUDE.md (phases followed in order)
 
-✔ ARCHITECTURE_DECISIONS.md ADR-016 (TypeScript), ADR-017 (ESLint + Prettier), ADR-018 (Path Aliases), ADR-019 (Feature Flags, new)
+✔ ARCHITECTURE_DECISIONS.md ADR-016 through ADR-019, plus ADR-020 (new — supersedes the Metro-resolver half of ADR-018)
+
+✔ ADR-012 (Navigation Architecture) — now directly implemented, not just aspirational
 
 Repository state conflicts with:
 
 None currently open at the React Native layer. See Known Issues #2 for the unresolved native-layer documentation conflict, scoped to Phase 016.
-
-Not yet applicable (no native modules exist yet to evaluate):
-
-— ADR-002 through ADR-011, ADR-013, ADR-014, ADR-015 (ADR-012, Navigation Architecture, becomes directly applicable starting Phase 007)
 
 ---
 
@@ -189,11 +228,11 @@ Not yet applicable (no native modules exist yet to evaluate):
 
 README
 
-🟡 Still the generic default React Native CLI readme, not yet Nova-specific (unchanged, out of scope for this phase)
+🟡 Still the generic default React Native CLI readme, not yet Nova-specific
 
 Roadmap
 
-✅ Updated — Phase 006 marked complete, Phase 007 marked next
+✅ Updated — Phase 007 marked complete, Phase 008 marked next
 
 Session
 
@@ -201,31 +240,27 @@ Session
 
 ADR
 
-✅ Updated — ADR-019 added
+✅ Updated — ADR-020 added, superseding the Metro-side portion of ADR-018
 
 Architecture Docs
 
-❌ `docs/architecture/` exists but is empty — still no architecture documentation written (unchanged, out of scope for this phase)
-
-Bootstrap / Versioning
-
-✅ New this session — START_HERE.md rewritten as the real session bootstrap; DOCS_MANIFEST.json added as the hash ledger for all 10 project documents
+❌ `docs/architecture/` exists but is empty — still no architecture documentation written
 
 ---
 
 ## Next Phase
 
-Phase 007
+Phase 008
 
-Navigation
+Theme System
 
 Goal
 
-Wire up React Navigation across the ten `src/screens/*` folders created in Phase 005, gated by `FEATURES` from Phase 006 (ADR-019). First phase to actually mount `src/navigation/` and exercise the path aliases inside a running app.
+Introduce Material 3 design tokens (color, typography, spacing) in `src/theme/`, per ADR-009, and apply them to the four screens built in Phase 007, which currently use raw inline styles.
 
 Dependencies
 
-Phase 005 (Folder Structure), Phase 006 (Environment Configuration) — both complete
+Phase 005 (Folder Structure — `src/theme/` already exists), Phase 007 (Navigation — screens exist to theme) — both complete
 
 Expected Duration
 
@@ -237,26 +272,26 @@ Medium
 
 When starting a new session:
 
-1. Read START_HERE.md and DOCS_MANIFEST.json first (not the full static document set — see the protocol in START_HERE.md). For each static document, compare its recorded hash in DOCS_MANIFEST.json to `git hash-object <file>`; only read the full document if the hash no longer matches, and if so, update its summary in START_HERE.md and its hash in DOCS_MANIFEST.json.
-2. Always read all four dynamic documents in full: SESSION.md (this file), PROJECT_STATE.json, PROJECT_ROADMAP.md, ARCHITECTURE_DECISIONS.md. They are exempt from the hash-skip shortcut by design.
-3. Verify repository health against the actual files and toolchain — do not trust SESSION.md / PROJECT_STATE.json without spot-checking the repository, including re-verifying previously-logged Known Issues are still current (Phase 005 found one that had gone stale for two phases).
-4. Continue from Phase 007.
+1. Read START_HERE.md and DOCS_MANIFEST.json first (hash-check protocol — see START_HERE.md). Only re-read a static document in full if its hash no longer matches.
+2. Always read all four dynamic documents in full: SESSION.md (this file), PROJECT_STATE.json, PROJECT_ROADMAP.md, ARCHITECTURE_DECISIONS.md.
+3. Verify repository health against the actual files and toolchain — do not trust documentation without spot-checking, and where a phase's changes affect runtime behavior (not just JS tooling), verify on the physical device, not just via `tsc`/`jest`. Phase 007 is a direct lesson here: `tsc` and `jest` both passed while the app was actually broken on-device.
+4. Continue from Phase 008.
 5. Do not redesign previous phases.
-6. Stop after Phase 007.
+6. Stop after Phase 008.
 7. Update this document with verified information only. If any static document changed, update DOCS_MANIFEST.json and START_HERE.md too.
 
 ---
 
 ## Notes
 
-This session completed Phase 006 (Environment Configuration, scoped to a feature-flag module since there's no backend/secrets to configure) and, separately, built the documentation-versioning system requested afterward: a hash-based staleness check (DOCS_MANIFEST.json) paired with a condensed bootstrap file (START_HERE.md) so future sessions stop re-reading ~3,000+ lines of rarely-changing static documents every single time. This is tooling/process work, not a numbered roadmap phase, so PROJECT_ROADMAP.md's phase numbering is untouched.
+Phase 007's most important lesson: alias/tooling changes that touch the actual bundler must be verified on a running app, not just via `tsc`/`jest`, which use entirely separate resolution mechanisms and can both pass while Metro is genuinely broken. This is now built into the Claude Code Instructions above. Two environment quirks were also worked around this session (stale Gradle daemon lock from concurrent builds; `TaskStop` not killing the underlying Windows Metro process) — neither is a code issue, both are noted above under Testing/Completed for anyone hitting the same thing later.
 
 ## Resume Token
 
 STAGE=1
 
-PHASE=007
+PHASE=008
 
 STATUS=READY
 
-NEXT=Navigation
+NEXT=Theme System

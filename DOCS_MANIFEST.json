@@ -2,7 +2,7 @@
   "protocol_version": 1,
   "protocol": "See START_HERE.md. For each 'static' doc, compare the hash below to `git hash-object <file>`. Match: trust START_HERE.md's condensed summary, skip reading the file. Mismatch: read the file in full, then update its summary in START_HERE.md and its hash here. 'dynamic' docs are always read in full every session — their hashes here are informational only, not used to skip anything.",
   "generated": "2026-07-15",
-  "last_updated_phase": 6,
+  "last_updated_phase": 7,
   "docs": {
     "PROJECT_MANIFEST.md": {
       "category": "static",
@@ -42,26 +42,26 @@
     },
     "ARCHITECTURE_DECISIONS.md": {
       "category": "dynamic",
-      "hash": "c4aed00dcbf64deb3bf7de5898474e4fc83f2392",
-      "last_changed_phase": 6,
+      "hash": "674d2619e56ce0007f570f217a52a6c7573562aa",
+      "last_changed_phase": 7,
       "last_verified": "2026-07-15"
     },
     "PROJECT_ROADMAP.md": {
       "category": "dynamic",
-      "hash": "27e628670ef47c980c9cca26bdbbe1dfd9933ac6",
-      "last_changed_phase": 6,
+      "hash": "c9f354be9c8c01f5d9feab89755da922dca916a5",
+      "last_changed_phase": 7,
       "last_verified": "2026-07-15"
     },
     "SESSION.md": {
       "category": "dynamic",
-      "hash": "fa463920d383acabbdd37944d9089141031d8e53",
-      "last_changed_phase": 6,
+      "hash": "8090cb7f8aceb7f1fc209bb1e4766b48311b3ac5",
+      "last_changed_phase": 7,
       "last_verified": "2026-07-15"
     },
     "PROJECT_STATE.json": {
       "category": "dynamic",
-      "hash": "8d4ae49d2bf893801f2ce72c9c7e5b55fbdbfe67",
-      "last_changed_phase": 6,
+      "hash": "b2ee352364483b48a25312fdbcdc53cc0e47fabb",
+      "last_changed_phase": 7,
       "last_verified": "2026-07-15"
     }
   }

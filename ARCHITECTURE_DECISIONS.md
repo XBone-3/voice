@@ -882,6 +882,60 @@ If Nova ever needs true per-environment configuration (e.g. a staging vs. produc
 
 ---
 
+# ADR-020
+
+## Path Alias Resolution, Corrected: Adopt babel-plugin-module-resolver
+
+Status
+
+Accepted — supersedes the Metro-side mechanism in ADR-018
+
+Date
+
+2026-07-15
+
+### Context
+
+ADR-018 verified path aliases through `tsc` and `jest`, but explicitly noted: "Full Metro-bundler resolution inside a running app was not exercised in this phase... that will be exercised naturally when Phase 007 (Navigation) first runs the app on a physical device." Phase 007 did exactly that, and it failed: the app showed a red screen — `Unable to resolve module @navigation/RootNavigator`.
+
+Root cause, confirmed by reading `metro-resolver/src/resolve.js` (`parseBareSpecifier`): for any import starting with `@` that contains exactly one `/`, Metro treats the **entire string** as a single atomic package name — mirroring real npm's `@scope/name` convention — with an empty subpath. So `@navigation/RootNavigator` is parsed as packageName `"@navigation/RootNavigator"`, subpath `""`, and Metro looks up `extraNodeModules["@navigation/RootNavigator"]`, which doesn't exist (the map only has a `"@navigation"` key). Only bare imports with no subpath at all (`from '@theme'`, `from '@env'`) ever worked, because those never enter that two-segment parsing branch. This is a hard limitation of Metro's built-in resolver for a "prefix + arbitrary subpath" alias scheme — not a configuration mistake fixable by adjusting `extraNodeModules` further.
+
+`tsc` and `jest` didn't catch this because neither uses Metro's resolver: `tsc` uses its own glob-style `paths` substitution, and Jest (at the time) used its own regex-based `moduleNameMapper` — both are unrelated mechanisms that happened to mask a bug specific to Metro's real bundler.
+
+### Decision
+
+Replace the Metro-side mechanism with `babel-plugin-module-resolver`, configured once in `babel.config.js`. It rewrites aliased imports to relative paths at the Babel/AST transform stage — before Metro's resolver (or Jest's, via `babel-jest`) ever sees the `@`-prefixed specifier — so Metro's `@scope/name` parsing quirk never comes into play.
+
+Consequently:
+
+- `metro.config.js` no longer sets `resolver.extraNodeModules` — back to the default config, with a comment pointing here.
+- `jest.config.js` no longer sets `moduleNameMapper` — `babel-jest` applies the same `babel.config.js` plugin during test transforms, confirmed by re-running the full suite (`env.test.ts`, `App.test.tsx`) with `moduleNameMapper` removed: still passing.
+- `tsconfig.json`'s `paths` are unchanged — `tsc` doesn't run through Babel, so it still needs its own mapping.
+
+This reduces the "must stay in sync by hand" surface ADR-018 flagged as a disadvantage from three files to two (`babel.config.js` and `tsconfig.json`).
+
+Verification performed: full toolchain (`eslint`, `prettier --check`, `tsc --noEmit`, `jest`) passing, plus **actual on-device verification** — built, installed, and launched on the connected physical device (I2219, Android 16), confirmed via `adb logcat` (no crashes, no JS errors) and screenshots that Home renders, tapping "Settings" navigates with a native transition, and the hardware back button returns to Home.
+
+### Consequences
+
+Advantages
+
+Aliases now work identically in Metro, Jest, and `tsc` — actually verified in a running app, not just in test tooling
+
+One fewer file to keep in sync (two instead of three)
+
+Standard, widely-used solution for exactly this problem in the React Native ecosystem
+
+Disadvantages
+
+One new dependency (`babel-plugin-module-resolver`) was added after all — ADR-018's "no new dependency" call did not survive contact with the real bundler. Recorded here rather than pretending ADR-018 was fully correct: it was correct for what it verified (`tsc`, `jest`), and wrong for what it didn't (Metro).
+
+### Future
+
+This is the definitive alias mechanism going forward. If a new top-level `src/` folder is added, update both `babel.config.js` and `tsconfig.json` — not `metro.config.js` or `jest.config.js`, which no longer carry alias config.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.

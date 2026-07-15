@@ -1,25 +1,15 @@
 module.exports = {
   preset: '@react-native/jest-preset',
-  // Mirrors the aliases in metro.config.js resolver.extraNodeModules and
-  // tsconfig.json compilerOptions.paths — keep all three in sync (ADR-018).
-  moduleNameMapper: {
-    '^@env$': '<rootDir>/src/env/index',
-    '^@env/(.*)$': '<rootDir>/src/env/$1',
-    '^@screens$': '<rootDir>/src/screens/index',
-    '^@screens/(.*)$': '<rootDir>/src/screens/$1',
-    '^@components$': '<rootDir>/src/components/index',
-    '^@components/(.*)$': '<rootDir>/src/components/$1',
-    '^@navigation$': '<rootDir>/src/navigation/index',
-    '^@navigation/(.*)$': '<rootDir>/src/navigation/$1',
-    '^@hooks$': '<rootDir>/src/hooks/index',
-    '^@hooks/(.*)$': '<rootDir>/src/hooks/$1',
-    '^@services$': '<rootDir>/src/services/index',
-    '^@services/(.*)$': '<rootDir>/src/services/$1',
-    '^@stores$': '<rootDir>/src/stores/index',
-    '^@stores/(.*)$': '<rootDir>/src/stores/$1',
-    '^@theme$': '<rootDir>/src/theme/index',
-    '^@theme/(.*)$': '<rootDir>/src/theme/$1',
-    '^@assets$': '<rootDir>/src/assets/index',
-    '^@assets/(.*)$': '<rootDir>/src/assets/$1',
-  },
+  // The preset's own transformIgnorePatterns only exempts react-native/
+  // @react-native packages from transformation. @react-navigation and
+  // react-native-screens ship ESM and need the same exemption, or Jest
+  // fails on their `export` syntax (see Phase 007). Setting this key
+  // replaces the preset's array rather than merging it, so its original
+  // packages are repeated here alongside the new ones.
+  transformIgnorePatterns: [
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-navigation|react-native-screens)/)',
+  ],
+  // No moduleNameMapper: babel-jest applies babel.config.js's
+  // module-resolver plugin during transform, so aliased imports are
+  // already rewritten to relative paths before Jest resolves them (ADR-020).
 };

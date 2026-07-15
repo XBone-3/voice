@@ -26,10 +26,11 @@ Environment Configuration
 
 Phase 007
 Navigation
-⏭ Next
+✅ Complete — React Navigation (native-stack) wired across Home/Settings/Developer/Diagnostics, gated by FEATURES (ADR-019); found and fixed a real Metro alias-resolution bug on physical-device verification, replacing the Phase 005 mechanism with babel-plugin-module-resolver (ADR-020)
 
 Phase 008
 Theme System
+⏭ Next
 
 Phase 009
 Design Tokens
