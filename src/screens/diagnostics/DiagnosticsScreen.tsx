@@ -1,32 +1,20 @@
-import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useTheme, type Theme } from '@theme';
+import { StyleSheet } from 'react-native';
+import { Screen, AppText } from '@components';
 
 function DiagnosticsScreen() {
-  const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Diagnostics</Text>
-    </View>
+    <Screen>
+      <AppText variant="titleLarge" style={styles.title}>
+        Diagnostics
+      </AppText>
+    </Screen>
   );
 }
 
-function createStyles(theme: Theme) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.colors.background,
-    },
-    title: {
-      ...theme.typography.titleLarge,
-      fontWeight: '600',
-      color: theme.colors.text,
-    },
-  });
-}
+const styles = StyleSheet.create({
+  title: {
+    fontWeight: '600',
+  },
+});
 
 export default DiagnosticsScreen;

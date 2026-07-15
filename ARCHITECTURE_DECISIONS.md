@@ -1043,6 +1043,58 @@ Phase 010 (UI Components) is the first expected consumer of the newly added `sec
 
 ---
 
+# ADR-023
+
+## Shared UI Components
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+ADR-022 predicted Phase 010 would be the first consumer of `secondary`/`error`/`elevation` tokens. In practice, the 4 existing screens (still just title text and navigation links) never needed a raised surface, an error state, or a secondary action — so this phase ended up consuming only `background`, `text`, `textSecondary`, `primary` (existing) and `primaryContainer` (new, for ripple). Recorded honestly rather than claiming tokens were used that weren't; `secondary`/`error`/`elevation` remain unconsumed until a screen genuinely needs them (likely Phase 011 Settings, with real setting rows/toggles).
+
+The real, present problem this phase solved: all 4 screens duplicated an identical `flex:1`/`backgroundColor` container, duplicated manual `theme.typography.*` spreading, and Home's 3 navigation "links" were plain `Text` with `onPress` — no press feedback at all, not idiomatic Material.
+
+### Decision
+
+Added to `src/components/` (previously empty except its README):
+
+- **`Screen`** — themed `View` wrapper (`flex:1`, `backgroundColor: theme.colors.background`, optional `center` prop, default `true`). Replaces the container style every screen duplicated.
+- **`AppText`** — themed `Text` taking a `variant: keyof Theme['typography']`, applying that type-scale style plus `theme.colors.text` by default (overridable via a `color` prop). Replaces manual `theme.typography.*` spreading in every screen.
+- **`MenuLink`** — a `Pressable` + `AppText` combination with `android_ripple` using `theme.colors.primaryContainer`, replacing the underlined-`Text`-with-`onPress` pattern, which had zero touch feedback. Accepts an optional `testID` (a real, useful prop for any consumer's own testing, not test-only scaffolding).
+
+All 4 screens were retrofitted: `SettingsScreen`/`DeveloperScreen`/`DiagnosticsScreen` collapsed to a few lines each (no longer need `useTheme`/`useMemo`/local `createStyles` at all — `Screen`/`AppText` handle theming internally). `HomeScreen` composes `Screen` + `AppText` + 3×`MenuLink`.
+
+Verified: 3 new tests (`Screen` applies theme background, `AppText` applies the requested variant, `MenuLink` renders its label and fires `onPress`), plus on-device verification — rebuilt, installed, launched, screenshotted Home (confirmed ripple-capable links, no more underline styling) and Settings (confirmed navigation still works through the new `Pressable`-based `MenuLink`), no crashes.
+
+### Consequences
+
+Advantages
+
+Real, present duplication removed across all 4 screens, not speculative refactoring
+
+Navigation links now have proper Material ripple feedback, which they never had before
+
+3 of 4 screens no longer need any local theming boilerplate at all
+
+Disadvantages
+
+`secondary`/`error`/`elevation` tokens remain unconsumed — no card/error-state component exists yet since nothing needs one
+
+`MenuLink` is single-purpose (a themed navigation link); a more general `Button` (primary/secondary/text variants) is not yet built since nothing currently needs one beyond navigation
+
+### Future
+
+Phase 011 (Settings Infrastructure) is the next likely consumer of `secondary`/`elevation` (setting rows, possibly a card-like grouping) and may need a general-purpose `Button` beyond `MenuLink`'s navigation-only shape. Extend `src/components/` then rather than building it speculatively now.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.

@@ -38,10 +38,11 @@ Design Tokens
 
 Phase 010
 UI Components
-⏭ Next
+✅ Complete — added `Screen`/`AppText`/`MenuLink` to `src/components/`, removing real duplication across all 4 screens and giving Home's navigation links proper Material ripple feedback for the first time (ADR-023); verified on the physical device
 
 Phase 011
 Settings Infrastructure
+⏭ Next
 
 Phase 012
 Developer Mode

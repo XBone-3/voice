@@ -36,11 +36,11 @@ TypeScript (`npx tsc --noEmit`)
 
 Unit Tests (`npx jest`)
 
-✅ Passing (3 suites, 9 tests)
+✅ Passing (4 suites, 12 tests)
 
 Physical Device
 
-✅ Verified — Home and Settings screenshotted with the new tokens applied this session (see Testing)
+✅ Verified — Home and Settings screenshotted with the new shared components this session (see Testing)
 
 Documentation
 
@@ -56,51 +56,51 @@ Stage 1 — Foundation
 
 Current Phase
 
-Phase 010
+Phase 011
 
-UI Components
+Settings Infrastructure
 
 Last Completed
 
-Phase 009
+Phase 010
 
-Design Tokens — full Material 3 type scale, spacing scale, elevation levels, and motion durations added to `src/theme/`, extending Phase 008's mechanism (ADR-022)
+UI Components — `Screen`/`AppText`/`MenuLink` added to `src/components/`, removing real duplication across all 4 screens and giving navigation links proper Material ripple feedback (ADR-023)
 
 Completion
 
-9 / 100 Phases
+10 / 100 Phases
 
 ---
 
 ## Current Objective
 
-Phase 010 will build the shared `src/components/` library (buttons, cards, list items) that Phase 011+ screens will use, consuming the token catalog `src/theme/` now provides in full.
+Phase 011 will build actual settings infrastructure (persisted preferences, setting rows) behind the `SettingsScreen` shell created in Phase 007. Likely the first real consumer of the `secondary`/`elevation` tokens that have existed since Phase 009 but gone unused (see Known Issues #5), and may need a general-purpose `Button` beyond `MenuLink`'s navigation-only shape.
 
 ---
 
 ## Completed This Session
 
-✔ Added 4 new mode-independent token modules: `src/theme/typography.ts` (full 15-style Material 3 type scale), `spacing.ts` (4dp-grid scale), `elevation.ts` (6 M3 elevation levels), `motion.ts` (3 duration buckets — a deliberate simplification of M3's 12-token scale, expand when Phase 091 needs it)
+✔ Added `src/components/Screen.tsx` — themed `View` wrapper (`flex:1`, `backgroundColor`, optional centering), replacing the identical container style duplicated across all 4 screens
 
-✔ Extended `Theme` (`src/theme/types.ts`) with the fuller Material 3 color vocabulary (`onPrimary`, `primaryContainer`, `onPrimaryContainer`, `secondary`, `onSecondary`, `onBackground`, `onSurface`, `surfaceVariant`, `onSurfaceVariant`, `error`, `onError`, `outline`) while keeping all 5 Phase 008 role names for backward compatibility — the mechanism itself was not touched
+✔ Added `src/components/AppText.tsx` — themed `Text` bound to `theme.typography.*` via a `variant` prop, replacing manual typography-style spreading in every screen
 
-✔ Updated `light.ts`/`dark.ts` with real Material 3 baseline values for the new roles; both now import/spread the shared `typography`/`spacing`/`elevation`/`motion` modules instead of duplicating them
+✔ Added `src/components/MenuLink.tsx` — `Pressable` + `AppText` with Android ripple (`theme.colors.primaryContainer`), replacing Home's 3 underlined-`Text`-with-`onPress` links, which had no touch feedback at all. First real consumer of the `primaryContainer` token added in Phase 009
 
-✔ Retrofitted all 4 screens (`HomeScreen`, `SettingsScreen`, `DeveloperScreen`, `DiagnosticsScreen`) to use `theme.typography.*`/`theme.spacing.*` instead of hardcoded `fontSize`/`gap`/`marginTop` — closes the Technical Debt item flagged after Phase 008
+✔ Retrofitted all 4 screens: `SettingsScreen`/`DeveloperScreen`/`DiagnosticsScreen` collapsed to a few lines each (no longer need `useTheme`/`useMemo`/local styles directly); `HomeScreen` now composes `Screen` + `AppText` + 3×`MenuLink`
 
-✔ Added 3 new tests: typography/spacing/elevation/motion are identical between light and dark (only colors differ), the full 15-style type scale is present, elevation levels increase monotonically
+✔ Added 3 new tests (`Screen` applies theme background, `AppText` applies the requested variant, `MenuLink` renders its label and fires `onPress`)
 
-✔ **On-device verification**: rebuilt (`gradlew assembleDebug`, BUILD SUCCESSFUL, no new native deps), installed, launched, confirmed no crashes via `adb logcat`, and screenshotted Home and Settings — both render correctly with the new type scale and spacing
+✔ **On-device verification**: rebuilt, installed, launched, confirmed no crashes via `adb logcat`, screenshotted Home (links now ripple-capable, no longer underlined — an intentional, more authentically Material look) and confirmed tap-navigation to Settings still works through the new `Pressable`-based `MenuLink`
 
-✔ Full regression: `eslint`, `prettier --check`, `tsc --noEmit`, `jest`, `gradlew assembleDebug` — all pass
+✔ Full regression: `eslint`, `prettier --check`, `tsc --noEmit`, `jest`, `gradlew assembleDebug` — all pass. One real `react-native/no-inline-styles` ESLint warning was found and fixed (moved 3 screens' inline `fontWeight` overrides into `StyleSheet.create`)
 
 ---
 
 ## Pending
 
-Phase 010 — UI Components
+Phase 011 — Settings Infrastructure
 
-Phase 011 onward — per PROJECT_ROADMAP.md, none started
+Phase 012 onward — per PROJECT_ROADMAP.md, none started
 
 ---
 
@@ -120,7 +120,7 @@ None.
 
 4. The six not-yet-enabled screens remain README-only with no component and no registered route — intentional (ADR-019/ADR-020), not an oversight.
 
-5. `secondaryContainer`, `tertiary`/`tertiaryContainer` color roles and the full 12-token M3 motion scale are still absent from `src/theme/` — intentionally deferred until a real consumer needs them (likely Phase 010).
+5. `secondary`, `error`, and `elevation` tokens (added Phase 009) remain unconsumed by any component — `MenuLink` only ended up using `primaryContainer`. Intentional (ADR-023): no card/error-state UI exists yet to need them. Likely resolved by Phase 011.
 
 ---
 
@@ -129,7 +129,7 @@ None.
 - App branding/identity not yet applied (see Known Issues #1).
 - Native Kotlin folder layout undecided (see Known Issues #2).
 - Alias definitions still require keeping two files in sync by hand (`babel.config.js`, `tsconfig.json`).
-- Token values are Material 3 baseline references, not custom-tuned for a distinct Nova brand identity — acceptable for now (ADR-022).
+- No general-purpose `Button` component yet — `MenuLink` is navigation-specific; Phase 011 may need one.
 
 ---
 
@@ -161,23 +161,23 @@ Last Tested
 
 Tests Performed
 
-✔ `npx eslint .` — pass
+✔ `npx eslint .` — pass (fixed 3 `no-inline-styles` warnings found this session)
 
 ✔ `npx prettier --check .` — pass
 
 ✔ `npx tsc --noEmit` — pass
 
-✔ `npx jest` — pass (3 suites, 9 tests)
+✔ `npx jest` — pass (4 suites, 12 tests)
 
 ✔ `cd android && ./gradlew assembleDebug` — BUILD SUCCESSFUL
 
-✔ Installed and launched on device — screenshots of Home and Settings confirmed correct rendering with the new typography/spacing tokens
+✔ Installed and launched on device — screenshots of Home and Settings confirmed correct rendering and working navigation through the new `Pressable`-based `MenuLink`
 
 ✔ `adb logcat -d AndroidRuntime:E` — no crashes
 
 Environment note
 
-Same Windows `TaskStop`-doesn't-kill-the-process issue recurred with Metro this session (as in Phases 007/008) — checked `Get-NetTCPConnection -LocalPort 8081` after every `TaskStop` and force-killed the stale PID before starting a fresh instance, exactly as documented after Phase 007.
+Same Windows `TaskStop`-doesn't-kill-the-process issue recurred again with Metro this session (as in Phases 007–009) — checked `Get-NetTCPConnection -LocalPort 8081` after every `TaskStop` and force-killed the stale PID before starting fresh, per the standing procedure.
 
 Pending
 
@@ -193,9 +193,9 @@ Repository state matches:
 
 ✔ CLAUDE.md
 
-✔ ARCHITECTURE_DECISIONS.md ADR-016 through ADR-021, plus ADR-022 (new)
+✔ ARCHITECTURE_DECISIONS.md ADR-016 through ADR-022, plus ADR-023 (new)
 
-✔ ADR-009 (Modern Material Design) — color, dark mode, typography, spacing, and elevation now implemented; motion is durations-only so far, no easing curves (deferred to Phase 091)
+✔ ADR-002 (Kotlin Owns Native Logic) — components remain presentation-only, no business logic
 
 Repository state conflicts with:
 
@@ -211,7 +211,7 @@ README
 
 Roadmap
 
-✅ Updated — Phase 009 marked complete, Phase 010 marked next
+✅ Updated — Phase 010 marked complete, Phase 011 marked next
 
 Session
 
@@ -219,7 +219,7 @@ Session
 
 ADR
 
-✅ Updated — ADR-022 added
+✅ Updated — ADR-023 added
 
 Architecture Docs
 
@@ -229,17 +229,17 @@ Architecture Docs
 
 ## Next Phase
 
-Phase 010
+Phase 011
 
-UI Components
+Settings Infrastructure
 
 Goal
 
-Build the shared `src/components/` library (buttons, cards, list items, etc.) consuming the full token catalog `src/theme/` now provides, so Phase 011+ screens compose from shared components instead of one-off styles.
+Build actual settings infrastructure (persisted preferences, real setting rows) behind the `SettingsScreen` shell. Likely consumer of `secondary`/`elevation` tokens and possibly a general-purpose `Button` beyond `MenuLink`.
 
 Dependencies
 
-Phase 009 (Design Tokens) — complete
+Phase 010 (UI Components) — complete
 
 Expected Duration
 
@@ -253,24 +253,24 @@ When starting a new session:
 
 1. Read START_HERE.md and DOCS_MANIFEST.json first (hash-check protocol). Only re-read a static document in full if its hash no longer matches.
 2. Always read all four dynamic documents in full: SESSION.md (this file), PROJECT_STATE.json, PROJECT_ROADMAP.md, ARCHITECTURE_DECISIONS.md.
-3. Verify repository health against the actual files and toolchain. Where a phase changes runtime/visual behavior, verify on the physical device — do not rely on `tsc`/`jest` alone.
-4. Continue from Phase 010.
+3. Verify repository health against the actual files and toolchain. Where a phase changes runtime/visual/interactive behavior, verify on the physical device — do not rely on `tsc`/`jest` alone.
+4. Continue from Phase 011.
 5. Do not redesign previous phases.
-6. Stop after Phase 010.
+6. Stop after Phase 011.
 7. Update this document with verified information only. If any static document changed, update DOCS_MANIFEST.json and START_HERE.md too.
 
 ---
 
 ## Notes
 
-Phase 009 was purely additive to Phase 008's already-verified mechanism — no changes to `ThemeProvider`/`ThemeContext`, only new token modules and expanded `colors`. This kept the change low-risk despite touching every screen file. `secondaryContainer`/`tertiary` and the fuller motion scale were deliberately left out; Phase 010 (UI Components) is expected to be the first real consumer that might need them.
+Phase 010 stayed scoped to real, present duplication (3 components fixing problems that already existed in the 4 screens) rather than building a speculative full component library. ADR-022's prediction that this phase would consume `secondary`/`error`/`elevation` didn't pan out — recorded honestly in ADR-023 rather than glossed over. Those tokens, plus a general-purpose `Button`, are now explicitly flagged for Phase 011 to pick up if it needs them.
 
 ## Resume Token
 
 STAGE=1
 
-PHASE=010
+PHASE=011
 
 STATUS=READY
 
-NEXT=UI Components
+NEXT=Settings Infrastructure
