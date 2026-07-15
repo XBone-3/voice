@@ -70,10 +70,11 @@ Turbo Module Setup
 
 Phase 018
 Permission Manager
-⏭ Next
+✅ Complete — generic Android runtime permission check/request mechanism (ADR-031): `permissions/PermissionManager.kt` (plain Kotlin logic, no bridge dependency) wrapped by a new thin `bridge/PermissionManagerModule.kt` TurboModule (registered in the existing `BridgePackage`), exposed via `services/permissions.ts`. Verified against `RECORD_AUDIO` — the first permission any future engine (Phase 026/027) will actually need — but never auto-requested from real users: `App.tsx` only checks status silently on mount; the actual request (showing the real OS dialog) is a manual, dev-only button on `DeveloperScreen`, per NON_FUNCTIONAL_REQUIREMENTS.md's "never request permissions before needed." Verified interactively on the physical device: real Android permission dialog appeared, granted, UI updated live to "Granted"
 
 Phase 019
 Foreground Service
+⏭ Next
 
 Phase 020
 Lifecycle Manager

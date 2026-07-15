@@ -1476,6 +1476,63 @@ When a future engine phase (most plausibly one from Phase 026 onward, or the Mem
 
 ---
 
+# ADR-031
+
+## Permission Manager: Generic Check/Request, Verified via RECORD_AUDIO
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+PROJECT_ROADMAP.md names Phase 018 "Permission Manager," and ADR-028 already slots a `permissions/` package for it ("Permission request/management helpers. Phase 018") — unlike Phase 017, this phase's scope was unambiguous from existing documents, so no user clarification was needed. ADR-002 assigns permission logic to Kotlin.
+
+No feature currently needs any specific Android runtime permission — no engine (voice, notification, accessibility, etc.) has been built yet. Building the check/request mechanism generically, with no permission wired into it, would leave it unverifiable and untested against the real Android permission system (unlike Phase 016/017, which each had a real, zero-permission native capability — `getAndroidVersion()`, `onTrimMemory()` — to prove their mechanism against). A genuine permission was needed to exercise the full check → request → OS dialog → grant/deny flow.
+
+`RECORD_AUDIO` was chosen: it's the first permission any future Nova engine will actually need (Phase 026 Audio Engine / Phase 027 Microphone Manager, only a few phases away), not an arbitrary or unrelated placeholder. NON_FUNCTIONAL_REQUIREMENTS.md's Security section ("never request permissions before needed") governs how it's used: the manifest declares it (required before any check/request can work at all — declaration alone shows no prompt to any user), `App.tsx`'s mount effect only **checks** current status (no OS dialog, just a query, mirroring how Phase 016/017 wired their own verification into the same mount effect), and the actual **request** — the one call that shows a real system dialog — is exposed only as a manual, developer-triggered button on `DeveloperScreen`, which is itself gated to debug builds (`FEATURES.developer = IS_DEV`, ADR-019) and never shown to a real end user in a release build.
+
+### Decision
+
+- `android/app/src/main/java/com/voice/permissions/PermissionManager.kt` — plain Kotlin object, no React Native/bridge dependency: `isGranted(context, permission): Boolean` (via `ContextCompat.checkSelfPermission`) and `request(activity, permission, requestCode, onResult)` (via `PermissionAwareActivity.requestPermissions` + a `PermissionListener` callback). `MainActivity` needed no changes — `ReactActivity` (its base class) already implements `PermissionAwareActivity` and already forwards `onRequestPermissionsResult` to it, confirmed by reading `ReactActivity.java` before writing any code (a lesson carried over from ADR-029: verify framework behavior against source before building on assumptions).
+- `android/app/src/main/java/com/voice/bridge/PermissionManagerModule.kt` — a new TurboModule, registered in the existing shared `BridgePackage` (a new `case` + `ReactModuleInfo` entry, no new `ReactPackage`, per that file's own stated design). Thin per ADR-008: it only translates `checkPermission(permission): Promise<Boolean>` / `requestPermission(permission): Promise<Boolean>` into calls on `permissions.PermissionManager` — no permission logic lives in the bridge module itself, honoring both ADR-028's package split and ADR-008's thin-bridge principle.
+- `src/nativeSpecs/NativePermissionManager.ts` / `src/services/permissions.ts` — generic over any permission string; not RECORD_AUDIO-specific. Follows `bridgeInfo.ts`'s exact not-linked warn-and-recover pattern.
+- `AndroidManifest.xml` — declares `RECORD_AUDIO`, with a comment explaining why it's here ahead of the Audio Engine phases and that declaration alone requests nothing from the user.
+- `App.tsx` — `checkPermission()` only, on mount, logged via the existing logger (`"Microphone permission — granted/denied"`). No `requestPermission()` call anywhere in the automatic startup path.
+- `src/screens/developer/DeveloperScreen.tsx` — new "Permissions" `Card`: a live-refreshing (on focus, matching `DiagnosticsScreen`'s pattern) status row plus a manual "Request Microphone" `Button`, letting a developer exercise the full request flow — including the real OS dialog and its rationale/deny/grant outcomes — before any real feature depends on it. This is real, permanent developer tooling (matching `DiagnosticsScreen`'s own Refresh/Clear precedent), not a throwaway demo.
+
+Verified: 2 new Jest tests (`checkPermission`/`requestPermission` both return `false` and log a warning when the module isn't linked, e.g. in Jest) plus 1 new `DeveloperScreen` test (the Permissions card resolves to "Denied" once the not-linked check settles); `developerScreen.test.tsx`'s render helper was made async (`await act(async () => ...)`, the exact pattern `App.test.tsx` already used) since the new card's `checkPermission()` call resolves on a microtask. Full regression: `eslint`/`prettier`/`tsc`/`jest` (10 suites, 38 tests) all pass, `gradlew assembleDebug` clean with zero warnings after one real compile error was fixed — the generated codegen class is `NativePermissionManagerSpec` (codegen keeps the `Native` prefix from the spec's file name, exactly as it did for `NativeBridgeInfoSpec`), not `PermissionManagerSpec` as first guessed.
+
+**On-device verification, the most interactive yet**: installed, launched — confirmed `checkPermission()` on mount logged `'Microphone permission — denied'` (correct: nothing had granted it yet), no crash. Navigated to Developer, confirmed the Permissions card showed "Denied." Tapped "Request Microphone" (bounds located precisely via `adb shell uiautomator dump`, after two earlier taps at guessed coordinates missed the actual button) — the **real Android system dialog** appeared: "Allow Voice to record audio? / While using the app / Only this time / Don't allow." Tapped "While using the app"; the card's status updated to "Granted" immediately, with no further app interaction, confirming the `PermissionListener` callback correctly resolved the JS-side Promise. No crashes throughout.
+
+### Consequences
+
+Advantages
+
+Generic, reusable check/request mechanism now exists for every future permission-gated engine (Phase 026 Microphone, Phase 044 Contacts, Phase 046 SMS, Phase 047 Notifications, etc.) to call into, rather than each building its own permission plumbing
+
+Correctly separates Android permission logic (`permissions/PermissionManager.kt`, reusable directly by future native code) from the thin bridge surface (`bridge/PermissionManagerModule.kt`), per ADR-028's package split and ADR-008
+
+Verified against the real Android permission system end-to-end (actual OS dialog, actual grant), not mocked or assumed
+
+No permission is ever requested from a real user without explicit developer action — `checkPermission()` (silent) is the only call in the automatic startup path; `requestPermission()` (the one that shows UI) is manual and dev-gated
+
+Disadvantages
+
+`requestPermission()` only supports a single in-flight request at a time (one fixed `requestCode`) — acceptable for this phase's scope (one manual test button); a future phase requesting multiple permissions concurrently will need per-call request codes or a request queue
+
+No "show rationale before re-asking" UX flow was built (Android best practice for a second request after a denial) — deferred to whichever future phase (most likely Phase 026/027) first needs a real user-facing permission request, since building that UX now, for an abstract test button, would be exactly the kind of speculative polish this project avoids
+
+### Future
+
+The first real engine phase to need a runtime permission (most likely Phase 026 Audio Engine or Phase 027 Microphone Manager for `RECORD_AUDIO` itself) should call `checkPermission`/`requestPermission` from `src/services/permissions.ts` directly rather than duplicating bridge plumbing, and should add rationale/re-request UX at that point, when there's a real user-facing moment to design it for.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.

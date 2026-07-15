@@ -16,6 +16,7 @@ import {
   getAndroidVersion,
   subscribeToMemoryPressure,
 } from '@services/bridgeInfo';
+import { checkPermission } from '@services/permissions';
 
 enableScreens();
 
@@ -32,6 +33,17 @@ function App() {
     const unsubscribe = subscribeToMemoryPressure(level => {
       logger.warn('App', `Memory pressure signaled — level ${level}`);
     });
+
+    // Status check only — never a request. Requesting RECORD_AUDIO here
+    // would prompt every user on every launch for a permission nothing
+    // uses yet (see ADR-031).
+    checkPermission('android.permission.RECORD_AUDIO').then(granted => {
+      logger.info(
+        'App',
+        `Microphone permission — ${granted ? 'granted' : 'denied'}`,
+      );
+    });
+
     return unsubscribe;
   }, []);
 

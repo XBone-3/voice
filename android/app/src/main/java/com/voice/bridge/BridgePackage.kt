@@ -19,6 +19,7 @@ class BridgePackage : BaseReactPackage() {
     ): NativeModule? =
         when (name) {
             NativeBridgeInfoModule.NAME -> NativeBridgeInfoModule(reactContext)
+            PermissionManagerModule.NAME -> PermissionManagerModule(reactContext)
             else -> null
         }
 
@@ -29,6 +30,15 @@ class BridgePackage : BaseReactPackage() {
                     ReactModuleInfo(
                         NativeBridgeInfoModule.NAME,
                         NativeBridgeInfoModule.NAME,
+                        false, // canOverrideExistingModule
+                        false, // needsEagerInit
+                        true, // hasConstants
+                        true, // isTurboModule
+                    ),
+                PermissionManagerModule.NAME to
+                    ReactModuleInfo(
+                        PermissionManagerModule.NAME,
+                        PermissionManagerModule.NAME,
                         false, // canOverrideExistingModule
                         false, // needsEagerInit
                         true, // hasConstants

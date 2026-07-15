@@ -1,6 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- RECORD_AUDIO: declared ahead of the Audio Engine/Microphone Manager
+         phases (026/027) that will genuinely need it, so Phase 018's
+         Permission Manager has a real permission to check/request against.
+         Declaring it here shows no prompt to users by itself — only an
+         actual requestPermission() call does, and none is wired into the
+         app's automatic startup path (see ADR-031). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
       android:name=".MainApplication"

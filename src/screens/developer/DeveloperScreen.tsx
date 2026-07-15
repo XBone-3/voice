@@ -1,14 +1,36 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme, type Theme } from '@theme';
 import { useSettingsStore } from '@stores';
-import { Screen, AppText, Card } from '@components';
+import { Screen, AppText, Card, Button } from '@components';
 import { IS_DEV, APP_NAME, APP_VERSION, FEATURES } from '@env';
+import { checkPermission, requestPermission } from '@services/permissions';
+
+const RECORD_AUDIO = 'android.permission.RECORD_AUDIO';
 
 function DeveloperScreen() {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const themeOverride = useSettingsStore(state => state.themeOverride);
+  const [micGranted, setMicGranted] = useState<boolean | null>(null);
+
+  const refreshMicPermission = useCallback(() => {
+    checkPermission(RECORD_AUDIO).then(setMicGranted);
+  }, []);
+
+  // Refreshes on focus, matching DiagnosticsScreen's pattern (ADR-027) —
+  // no polling. Status only; the actual request is a manual button below,
+  // since no engine needs this permission yet (see ADR-031).
+  useFocusEffect(
+    useCallback(() => {
+      refreshMicPermission();
+    }, [refreshMicPermission]),
+  );
+
+  const handleRequestMic = useCallback(() => {
+    requestPermission(RECORD_AUDIO).then(setMicGranted);
+  }, []);
 
   return (
     <Screen center={false}>
@@ -48,6 +70,23 @@ function DeveloperScreen() {
               value={value ? 'Enabled' : 'Disabled'}
             />
           ))}
+        </Card>
+
+        <Card>
+          <AppText variant="titleMedium" color={theme.colors.textSecondary}>
+            Permissions
+          </AppText>
+          <InfoRow
+            label="Microphone"
+            value={
+              micGranted == null ? 'Unknown' : micGranted ? 'Granted' : 'Denied'
+            }
+          />
+          <Button
+            label="Request Microphone"
+            onPress={handleRequestMic}
+            testID="request-microphone"
+          />
         </Card>
       </View>
     </Screen>
