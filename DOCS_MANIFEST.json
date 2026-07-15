@@ -1,0 +1,68 @@
+{
+  "protocol_version": 1,
+  "protocol": "See START_HERE.md. For each 'static' doc, compare the hash below to `git hash-object <file>`. Match: trust START_HERE.md's condensed summary, skip reading the file. Mismatch: read the file in full, then update its summary in START_HERE.md and its hash here. 'dynamic' docs are always read in full every session — their hashes here are informational only, not used to skip anything.",
+  "generated": "2026-07-15",
+  "last_updated_phase": 6,
+  "docs": {
+    "PROJECT_MANIFEST.md": {
+      "category": "static",
+      "hash": "daac23c4883bde474be61a65385b7291e514d290",
+      "last_changed_phase": 6,
+      "last_verified": "2026-07-15"
+    },
+    "VISION.md": {
+      "category": "static",
+      "hash": "3f5450171c80c53025bdaa6a6a646a1d418405eb",
+      "last_changed_phase": 0,
+      "last_verified": "2026-07-15"
+    },
+    "CLAUDE.md": {
+      "category": "static",
+      "hash": "a7db1b432a2b6388aff09a5c66797c6174e4bf51",
+      "last_changed_phase": 0,
+      "last_verified": "2026-07-15"
+    },
+    "PROJECT_CONTEXT.md": {
+      "category": "static",
+      "hash": "080f6b9771226ed2f07bf57bf7a0affffc1d0f40",
+      "last_changed_phase": 0,
+      "last_verified": "2026-07-15"
+    },
+    "ENGINEERING_PRINCIPLES.md": {
+      "category": "static",
+      "hash": "cb9cb34749c8dedccb8c548f9f8b3e14e1e0c0da",
+      "last_changed_phase": 0,
+      "last_verified": "2026-07-15"
+    },
+    "NON_FUNCTIONAL_REQUIREMENTS.md": {
+      "category": "static",
+      "hash": "aedfabde0e96a7ce3f1934c6ce3244d3815b2049",
+      "last_changed_phase": 0,
+      "last_verified": "2026-07-15"
+    },
+    "ARCHITECTURE_DECISIONS.md": {
+      "category": "dynamic",
+      "hash": "c4aed00dcbf64deb3bf7de5898474e4fc83f2392",
+      "last_changed_phase": 6,
+      "last_verified": "2026-07-15"
+    },
+    "PROJECT_ROADMAP.md": {
+      "category": "dynamic",
+      "hash": "27e628670ef47c980c9cca26bdbbe1dfd9933ac6",
+      "last_changed_phase": 6,
+      "last_verified": "2026-07-15"
+    },
+    "SESSION.md": {
+      "category": "dynamic",
+      "hash": "fa463920d383acabbdd37944d9089141031d8e53",
+      "last_changed_phase": 6,
+      "last_verified": "2026-07-15"
+    },
+    "PROJECT_STATE.json": {
+      "category": "dynamic",
+      "hash": "8d4ae49d2bf893801f2ce72c9c7e5b55fbdbfe67",
+      "last_changed_phase": 6,
+      "last_verified": "2026-07-15"
+    }
+  }
+}

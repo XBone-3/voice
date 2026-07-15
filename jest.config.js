@@ -3,6 +3,8 @@ module.exports = {
   // Mirrors the aliases in metro.config.js resolver.extraNodeModules and
   // tsconfig.json compilerOptions.paths — keep all three in sync (ADR-018).
   moduleNameMapper: {
+    '^@env$': '<rootDir>/src/env/index',
+    '^@env/(.*)$': '<rootDir>/src/env/$1',
     '^@screens$': '<rootDir>/src/screens/index',
     '^@screens/(.*)$': '<rootDir>/src/screens/$1',
     '^@components$': '<rootDir>/src/components/index',

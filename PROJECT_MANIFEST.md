@@ -313,14 +313,19 @@ Every phase must include:
 
 Claude must read these files before making architectural or implementation decisions:
 
-1. PROJECT_MANIFEST.md
-2. CLAUDE.md
-3. PROJECT_CONTEXT.md
-4. ENGINEERING_PRINCIPLES.md
-5. NON_FUNCTIONAL_REQUIREMENTS.md
-6. ARCHITECTURE_DECISIONS.md
-7. PROJECT_ROADMAP.md
-8. SESSION.md
+1. PROJECT_MANIFEST.md — static
+2. CLAUDE.md — static
+3. PROJECT_CONTEXT.md — static
+4. ENGINEERING_PRINCIPLES.md — static
+5. NON_FUNCTIONAL_REQUIREMENTS.md — static
+6. ARCHITECTURE_DECISIONS.md — dynamic
+7. PROJECT_ROADMAP.md — dynamic
+8. SESSION.md — dynamic
+9. PROJECT_STATE.json — dynamic
+
+**Static** documents (vision, philosophy, policy, engineering standards) change rarely. **Dynamic** documents (SESSION.md, PROJECT_STATE.json, PROJECT_ROADMAP.md, ARCHITECTURE_DECISIONS.md) change every phase by design and must always be read in full.
+
+Since Phase 006, a new session does not need to re-read every static document in full every time. Start from START_HERE.md instead: it holds condensed summaries of all six static documents plus a hash-based staleness check against DOCS_MANIFEST.json. If a static document's recorded hash still matches `git hash-object <file>`, trust START_HERE.md's summary of it. If the hash differs, that document changed since it was last condensed — read it in full, update the understanding, and refresh DOCS_MANIFEST.json. Dynamic documents are exempt from this shortcut and are always read in full, every session.
 
 If any document conflicts with another, resolve conflicts in this order:
 
@@ -360,14 +365,14 @@ SESSION.md
 
 Every new session begins with the following steps:
 
-1. Read all required project documents.
+1. Read START_HERE.md and DOCS_MANIFEST.json. For each static document, compare its recorded hash to `git hash-object <file>` — read the full document only if the hash no longer matches. Read all four dynamic documents in full, always (ARCHITECTURE_DECISIONS.md, PROJECT_ROADMAP.md, SESSION.md, PROJECT_STATE.json).
 2. Summarize the current project state.
 3. Identify the last completed phase from SESSION.md.
 4. Identify the next phase from PROJECT_ROADMAP.md.
 5. Explain the goal, architecture, files affected, dependencies, risks, and testing plan.
 6. Wait for user approval.
 7. Generate only the code for the approved phase.
-8. Update SESSION.md after successful completion.
+8. Update SESSION.md after successful completion. If any static document changed, update its summary in START_HERE.md and its hash in DOCS_MANIFEST.json.
 9. Stop and wait for further instructions.
 
 Claude must never proceed automatically to another phase.

@@ -22,10 +22,11 @@ Folder Structure
 
 Phase 006
 Environment Configuration
-⏭ Next
+✅ Complete — no backend/secrets exist to configure (no cloud AI, per CLAUDE.md), so this phase delivered `src/env/index.ts` with `IS_DEV` and a typed per-engine `FEATURES` flag map for Phase 007 to gate navigation against unbuilt engines (ADR-019)
 
 Phase 007
 Navigation
+⏭ Next
 
 Phase 008
 Theme System

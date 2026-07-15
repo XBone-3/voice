@@ -4,6 +4,8 @@
     "types": ["jest"],
     "baseUrl": ".",
     "paths": {
+      "@env": ["src/env/index"],
+      "@env/*": ["src/env/*"],
       "@screens": ["src/screens/index"],
       "@screens/*": ["src/screens/*"],
       "@components": ["src/components/index"],

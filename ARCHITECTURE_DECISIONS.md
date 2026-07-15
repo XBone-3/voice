@@ -835,6 +835,53 @@ If alias drift between the three config files becomes a recurring problem, recon
 
 ---
 
+# ADR-019
+
+## Feature-Flag Gated Navigation (Environment Configuration)
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+Phase 006 is "Environment Configuration." Nova has no backend, no cloud AI, and no secrets to manage (ABSOLUTE RULES in CLAUDE.md), so the conventional `.env` / per-environment-API-URL pattern that phase name usually implies does not apply here. The real near-term need is different: PROJECT_ROADMAP.md builds Nova's ten engines incrementally across ~90 phases, but Phase 007 (Navigation) needs to wire up all ten screens (`src/screens/*`, created in Phase 005) long before most of those engines exist. Without a way to gate that, Phase 007 would either link to screens with nothing behind them, or Phase 007 would have to hardcode which screens are "really" ready — a decision that would need to be re-made and re-wired by hand every time a new engine phase completes.
+
+### Decision
+
+Add `src/env/index.ts` exporting:
+
+- `IS_DEV` — a direct alias of React Native's built-in `__DEV__` global (no custom dev/release detection invented).
+- `FEATURES` — a typed, frozen map of screen name → boolean, one entry per engine-backed screen (`assistant`, `notifications`, `automation`, `memory`, `history`, `plugins`), defaulting to `false` until that engine's roadmap phases are done. `developer` and `diagnostics` are tied to `IS_DEV` rather than an engine. `home` and `settings` are intentionally not gated — they are unconditional shell screens with no engine dependency.
+
+Phase 007 will read `FEATURES` when building navigation, so enabling a screen becomes a one-line flip in this file once its engine is complete, rather than a navigation-code change.
+
+Given `@env` follows the same one-alias-per-`src/`-folder pattern as ADR-018, it was added to `metro.config.js`, `tsconfig.json`, and `jest.config.js` alongside the existing eight.
+
+### Consequences
+
+Advantages
+
+Phase 007 has a concrete, typed contract to build against instead of guessing which screens should be reachable
+
+Enabling a finished engine's screen is a one-line change, not a navigation refactor
+
+No speculative code — `FEATURES` only encodes screens that already exist (Phase 005) and engines already named in PROJECT_MANIFEST.md, nothing hypothetical beyond that
+
+Disadvantages
+
+`FEATURES` must be updated by hand as each engine phase completes; nothing enforces that a flag actually reflects reality. Acceptable for now — the alternative (deriving flags automatically from which native modules are registered) is real complexity not justified at this stage.
+
+### Future
+
+If Nova ever needs true per-environment configuration (e.g. a staging vs. production on-device model set), extend `src/env/index.ts` rather than introducing a new mechanism.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.
