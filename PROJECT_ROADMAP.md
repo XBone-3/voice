@@ -46,10 +46,11 @@ Settings Infrastructure
 
 Phase 012
 Developer Mode
-⏭ Next
+✅ Complete — `DeveloperScreen` shows real, live Build Info/Theme/Feature Flags in `Card`-grouped read-only sections (ADR-025); logging controls explicitly deferred to Phase 013, which doesn't exist yet; verified on the physical device
 
 Phase 013
 Logging Framework
+⏭ Next
 
 Phase 014
 Debug Screen

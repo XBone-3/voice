@@ -1149,6 +1149,55 @@ When Phase 016 (Native Module Infrastructure) and Phase 023/024 (Storage Layer /
 
 ---
 
+# ADR-025
+
+## Developer Mode: Read-Only Diagnostics, Logging Deferred
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+`src/screens/developer/README.md`, written back in Phase 005, already specified this screen's scope: *"logging controls, feature flags, internal state inspection."* Of those three, only "logging controls" isn't buildable yet — Phase 013 is literally "Logging Framework," which doesn't exist. Building fake or placeholder logging controls now would be dead UI wired to nothing. The other two — feature flags and internal state inspection — are fully achievable with what already exists (`FEATURES` from ADR-019, `theme`/`themeOverride` from ADR-021/024).
+
+### Decision
+
+- `src/env/index.ts` gained `APP_NAME`/`APP_VERSION`, read once from `package.json` (`resolveJsonModule`, already enabled per ADR-016) — centralizing the one deep-relative import here rather than scattering it, following the same pattern `IS_DEV`/`FEATURES` already established.
+- `DeveloperScreen` now shows three `Card`-grouped sections, all read-only:
+  - **Build Info** — app name, version, dev/production environment
+  - **Theme** — the resolved mode and the current override (from Phase 011's `settingsStore`)
+  - **Feature Flags** — every key in `FEATURES` with its live Enabled/Disabled state
+- A screen-local `InfoRow` component (label + value) was added directly in `DeveloperScreen.tsx`, not promoted to `src/components/` — it has exactly one consumer so far, matching how `ThemeOptionRow` was scoped in Phase 011.
+- No manual "enable Developer Mode" toggle was added. The screen remains gated by `FEATURES.developer = IS_DEV` (ADR-019) — debug builds already show it, release builds don't, and Nova is Android-only with physical-device debug-build testing as its primary workflow (ADR-010), so a separate production-facing unlock mechanism isn't needed at this stage. Revisit only if a release-build diagnostics need ever arises (likely Phase 098/099).
+- Logging controls are explicitly deferred to Phase 013.
+
+Verified: 3 new tests confirming real build info, live theme override, and every feature flag's actual state are shown (not hardcoded expectations — the flags test reads `FEATURES` itself rather than assuming a value, so it can't silently drift). A second instance of the Phase 011 `act()`-wrapping bug was found in the new test file and fixed the same way (unmount before resetting store state).
+
+**On-device verification**: rebuilt, installed, launched, navigated to Developer, screenshotted — confirmed every row shows real, live data matching the actual `FEATURES` object and `package.json` values, not placeholders. No crashes.
+
+### Consequences
+
+Advantages
+
+The screen is now genuinely useful for verifying engine-rollout status and theme state during development, not just a shell
+
+No dead/placeholder UI — everything shown is live and real
+
+Disadvantages
+
+No logging controls yet — the README's third promise is still open, correctly scoped to Phase 013
+
+### Future
+
+When Phase 013 (Logging Framework) exists, add a log-level control section to this screen following the same `Card` + read-only-display-plus-one-control pattern established here and in Phase 011's theme section.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.

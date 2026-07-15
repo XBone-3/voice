@@ -1,4 +1,7 @@
+import { name as APP_NAME, version as APP_VERSION } from '../../package.json';
+
 export const IS_DEV = __DEV__;
+export { APP_NAME, APP_VERSION };
 
 /**
  * Per-engine feature flags. Screens stay hidden from navigation until their
