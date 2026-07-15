@@ -12,12 +12,19 @@ import RootNavigator from '@navigation/RootNavigator';
 import { toNavigationTheme } from '@navigation/theme';
 import { ThemeProvider, useTheme } from '@theme';
 import { logger } from '@logger';
+import { getAndroidVersion } from '@services/bridgeInfo';
 
 enableScreens();
 
 function App() {
   useEffect(() => {
     logger.info('App', 'Nova started');
+
+    getAndroidVersion().then(androidVersion => {
+      if (androidVersion != null) {
+        logger.info('App', `Native bridge OK — Android ${androidVersion}`);
+      }
+    });
   }, []);
 
   return (

@@ -11,6 +11,7 @@ module.exports = {
         alias: {
           '@env': './src/env',
           '@logger': './src/logger',
+          '@nativeSpecs': './src/nativeSpecs',
           '@screens': './src/screens',
           '@components': './src/components',
           '@navigation': './src/navigation',

@@ -8,6 +8,7 @@
       "@env/*": ["src/env/*"],
       "@logger": ["src/logger/index"],
       "@logger/*": ["src/logger/*"],
+      "@nativeSpecs/*": ["src/nativeSpecs/*"],
       "@screens": ["src/screens/index"],
       "@screens/*": ["src/screens/*"],
       "@components": ["src/components/index"],

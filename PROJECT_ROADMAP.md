@@ -62,10 +62,11 @@ Architecture Validation
 
 Phase 016
 Native Module Infrastructure
-⏭ Next — first native Kotlin phase; use the package layout from ADR-028
+✅ Complete — first native Kotlin code: `NativeBridgeInfo` TurboModule (Promise-based `getAndroidVersion()`) registered via `BridgePackage` (`BaseReactPackage`) under `android/app/src/main/java/com/voice/bridge/` (ADR-028's layout); wired through `services/bridgeInfo.ts` into `App.tsx`. On-device verification initially failed for reasons that took most of the phase to isolate — ruled out stale APK, stale Metro bundle, sync-vs-async signature, and the `useTurboModuleInterop` feature flag one at a time, then confirmed via a from-scratch throwaway RN 0.86 app that the registration pattern itself was correct; root cause was stale build artifacts in this project's own `node_modules`/`android/build`/`.gradle`/Metro cache, accumulated across the phase's own iterative edits — a fully clean rebuild fixed it (ADR-029). Verified end-to-end on the physical device across two independent relaunches: `Native bridge OK — Android 16`
 
 Phase 017
 Turbo Module Setup
+⏭ Next
 
 Phase 018
 Permission Manager

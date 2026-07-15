@@ -1364,6 +1364,63 @@ As each engine's dedicated phase begins (026 onward), add its top-level package 
 
 ---
 
+# ADR-029
+
+## Native Module Infrastructure: TurboModule Registered, Promise-Based, Stale-Build False Alarm
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+Phase 016 built the first native Kotlin module (ADR-028's `bridge/` package): a `NativeBridgeInfo` TurboModule exposing `getAndroidVersion()`, registered via `BridgePackage` (a `BaseReactPackage`, following react-native-screens' own real implementation) and added manually to `MainApplication.kt`'s `packageList`, per RN's documented pattern for packages that cannot be autolinked.
+
+After the first successful native build (`BUILD SUCCESSFUL`, zero warnings once the deprecated 7-arg `ReactModuleInfo` constructor was corrected to the 6-arg form), on-device verification kept failing: `TurboModuleRegistry.get('NativeBridgeInfo')` returned `null` in JS, logging `"NativeBridgeInfo module is not linked"`, even though temporary native logging proved `BridgePackage.getModule("NativeBridgeInfo")` **was** being called and **did** return a valid, correctly-typed `NativeBridgeInfoModule` instance. Core bundled modules (`PlatformConstants`, `DeviceInfo`) resolved fine via the identical `TurboModuleRegistry.get()` call in the same JS runtime, ruling out a systemic Bridgeless failure.
+
+Extensive isolated testing eliminated, one at a time, with device evidence for each:
+- **Stale installed APK** — reinstalled fresh, confirmed via `adb shell dumpsys package` timestamps.
+- **Stale Metro bundle** — killed Metro, restarted with `--reset-cache`, confirmed "transform cache was reset"; bug persisted.
+- **Synchronous vs. Promise-based method** — converted `getAndroidVersion()` to return `Promise<string>`; identical failure either way.
+- **`useTurboModuleInterop` feature flag** — this New-Architecture flag defaults to `true` (`ReactNativeNewArchitectureFeatureFlagsDefaults.kt`) and its `getLegacyModule()` code path explicitly excludes real TurboModules. Force-disabled it via `ReactNativeFeatureFlags.dangerouslyForceOverride(...)`, confirmed the flag really was `false` at call time via logging — bug persisted anyway. Reverted this override afterward since it never fixed anything and left an unproven "dangerous" API call in `MainApplication.kt`.
+
+To settle whether this was a general RN 0.86 Bridgeless limitation or something specific to this project, a throwaway minimal RN 0.86 app was scaffolded from scratch (`npx @react-native-community/cli init`, New Architecture on by default) with the exact same manually-registered `BaseReactPackage` TurboModule pattern, including the Promise-based signature, the `babel-plugin-module-resolver` path-alias config, and a two-hop service-wrapper JS structure mirroring `bridgeInfo.ts`. **It worked correctly on the first try** — `getAndroidVersion()` resolved and returned the real Android version. This proved the registration pattern itself, the async signature, and the alias resolution were never the problem.
+
+Given the fresh template worked and nothing about the JS/Kotlin structure differed meaningfully, the remaining suspect was this project's own build state — accumulated across many iterative edits, native rebuilds, and constructor-signature fixes earlier in this same phase. A fully clean rebuild (`rm -rf node_modules android/build android/app/build android/.gradle`, fresh `npm install`, fresh `gradlew assembleDebug` — 136/136 tasks executed, none cached — plus Metro restarted with `--reset-cache`) resolved it immediately: `'[App] Native bridge OK — Android 16'` logged correctly, confirmed across two independent relaunches.
+
+### Decision
+
+- Ship `NativeBridgeInfo` as a Promise-based TurboModule (`getAndroidVersion(): Promise<string>`), not synchronous — kept from the debugging process as a genuinely safer default (no reliance on `isBlockingSynchronousMethod`), independent of the root cause.
+- Root cause of the on-device failure was a corrupted/stale build artifact somewhere in `node_modules`, `android/build`, `android/app/build`, `android/.gradle`, or Metro's transform cache — not a code or architecture defect. No production code changes were needed beyond the async signature; the fix was a clean rebuild.
+- **New standing practice**: whenever a native-module phase behaves inexplicably on-device after several native rebuilds within the same session (Kotlin returns a valid value but JS doesn't see it, or similar "impossible" splits between native and JS state), do a fully clean rebuild (delete `node_modules`, all `android/build*` output, `.gradle`, and Metro cache) *before* spending further effort on architectural theories. This session spent significant time disproving Metro caching, the interop flag, and sync-vs-async before reaching the actual cause.
+- When a bug's cause is genuinely ambiguous between "my project" and "the platform," build the smallest possible fresh reproduction of the platform's own documented pattern rather than continuing to theorize against the framework's internals — it settled this question in one build/run cycle after roughly a dozen failed on-device attempts against the real project.
+
+### Consequences
+
+Advantages
+
+First real native Kotlin↔JS bridge working and verified on the physical device, closing out Phase 016
+
+Promise-based signature is a better long-term default for all future TurboModule methods in this project
+
+The clean-rebuild-first practice and the throwaway-repro-app practice are now documented, reusable techniques for future phases' native debugging
+
+Disadvantages
+
+The actual root cause (which specific stale artifact) was never isolated — a full clean rebuild fixes it but doesn't identify whether it was Gradle's CMake cache, a stale generated codegen file, or something in Metro's haste map. If this recurs, isolate incrementally (Metro cache alone, then `android/app/build` alone, etc.) rather than nuking everything at once.
+
+Significant session time was spent on architectural theories (feature flags, sync/async, interop) that turned out to be unrelated — all reverted cleanly, but worth remembering clean-rebuild is a cheap early check
+
+### Future
+
+If native modules ever behave inconsistently again after multiple same-session rebuilds, try a clean rebuild before deep architectural investigation. `docs/architecture/overview.md` should note the Promise-based-by-default convention for new TurboModule methods.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.
