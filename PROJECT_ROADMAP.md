@@ -54,10 +54,11 @@ Logging Framework
 
 Phase 014
 Debug Screen
-⏭ Next — likely means giving `DiagnosticsScreen` its first real content (a log viewer over `logger.getEntries()`), not a new screen — see ADR-026's correction note
+✅ Complete — `DiagnosticsScreen` shows a real log viewer over `logger.getEntries()` (Refresh via `useFocusEffect`, no polling; Clear), color-coded by level — first real consumer of the `error`/`secondary`/`outline` tokens; added a general-purpose `Button` component, closing the gap flagged since ADR-023 (ADR-027); verified interactively on the physical device (navigate, toggle theme, observe real log entries, clear)
 
 Phase 015
 Architecture Validation
+⏭ Next
 
 Phase 016
 Native Module Infrastructure

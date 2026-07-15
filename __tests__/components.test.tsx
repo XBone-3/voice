@@ -3,7 +3,7 @@ import ReactTestRenderer, { act } from 'react-test-renderer';
 import { Text } from 'react-native';
 import { ThemeProvider } from '@theme';
 import { lightTheme } from '@theme/light';
-import { Screen, AppText, MenuLink, Card } from '@components';
+import { Screen, AppText, MenuLink, Card, Button } from '@components';
 
 function renderWithTheme(children: React.ReactElement) {
   let root: ReactTestRenderer.ReactTestRenderer;
@@ -47,6 +47,20 @@ test('MenuLink renders its label and calls onPress when pressed', () => {
 
   act(() => {
     root.root.findByProps({ testID: 'settings-link' }).props.onPress();
+  });
+  expect(onPress).toHaveBeenCalledTimes(1);
+});
+
+test('Button renders its label and calls onPress when pressed', () => {
+  const onPress = jest.fn();
+  const root = renderWithTheme(
+    <Button label="Refresh" onPress={onPress} testID="refresh-button" />,
+  );
+
+  expect(root.root.findByType(Text).props.children).toBe('Refresh');
+
+  act(() => {
+    root.root.findByProps({ testID: 'refresh-button' }).props.onPress();
   });
   expect(onPress).toHaveBeenCalledTimes(1);
 });

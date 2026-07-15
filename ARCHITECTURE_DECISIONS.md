@@ -1250,6 +1250,55 @@ Phase 014 (Debug Screen) should read `logger.getEntries()` to build a log viewer
 
 ---
 
+# ADR-027
+
+## Debug Screen: Log Viewer on DiagnosticsScreen
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+Confirmed the correction recorded in ADR-026: CLAUDE.md's Navigation architecture defines only 10 screens with no separate "Debug" screen, and `DiagnosticsScreen`'s own Phase-005 README already describes exactly this role. This phase gives `DiagnosticsScreen` its first real content — a viewer over Phase 013's `logger.getEntries()`. Full per-subsystem metrics (init time, memory, battery impact) remain deferred, per that same README, to "Phase 035 and beyond," since no engines exist to measure yet.
+
+### Decision
+
+- `DiagnosticsScreen` now renders: a header (title + Refresh/Clear actions), then either an empty state ("No log entries yet.") or a `FlatList` of log entries, most-recent-first.
+- Refreshing uses `useFocusEffect` (from `@react-navigation/native`, already a dependency) to reload entries whenever the screen gains focus — no polling, per ENGINEERING_PRINCIPLES.md's "prefer callbacks/listeners" battery guidance. A manual Refresh button covers the case of new entries arriving while already on the screen.
+- Each row (`LogRow`, screen-local) color-codes by level: `error` → `theme.colors.error`, `warn` → `theme.colors.secondary`, `info`/`debug` → `theme.colors.text`. Row separators use `theme.colors.outline`. **This is the first real, honest consumption of the `error`, `secondary`, and `outline` color tokens** — unused since Phase 009 (`error`/`secondary` were explicitly flagged as unconsumed in ADR-023/024/025's "Disadvantages" sections) — not forced in; they fit the log-level semantics naturally.
+- Added **`src/components/Button.tsx`** — a generic action button (Pressable + ripple), finally resolving the "no general-purpose Button" gap flagged since ADR-023. Its implementation necessarily resembles `MenuLink`'s (both are themed Pressable+ripple+AppText); kept as separate, small, deliberate duplication rather than refactoring `MenuLink` to share code, per CLAUDE.md's "don't redesign previous phases unless required" — `MenuLink` is semantically navigation-specific (its own doc comment says so) while `Button` is a generic action, and Phase 010's already-verified `MenuLink` wasn't worth touching for a minor DRY gain.
+
+Verified: 6 new tests (`Button` render/press; `DiagnosticsScreen` empty state, showing existing entries, Refresh picking up new entries, Clear emptying both the logger and the display). `useFocusEffect` was mocked to behave like `useEffect` for this focused unit test, since it needs a real navigation context to run normally — a standard pattern for testing screens that use React Navigation's focus hooks in isolation. One overly specific test assertion (checking the rendered node's exact type matched the raw `Pressable` reference) was written, found to be fragile — `findByProps` matched the outer `Button` composite rather than the inner host node — and removed rather than patched, since the behavior it was reaching for was already covered by the passing press-interaction tests.
+
+**On-device verification, the most interactive yet**: rebuilt, installed, launched, navigated to Settings, toggled the theme override twice (generating real `ThemeProvider` log entries), navigated to Diagnostics, and confirmed via screenshot that all 4 real entries appeared in the correct order with correct tags/timestamps/messages. Tapped Clear and confirmed the empty state appeared. One navigation mistake along the way: pressing the hardware back button while on Home (the stack's root) exits the app entirely, as expected Android back-stack behavior — not a bug, just a reminder to use the in-app header back arrow when popping a single screen rather than the hardware button from the root.
+
+### Consequences
+
+Advantages
+
+`DiagnosticsScreen` is now genuinely useful for observing real app behavior during development, not a shell
+
+Closes two long-tracked gaps at once: the missing `Button` component and the unused `error`/`secondary`/`outline` tokens — both closed by genuine need, not forced
+
+No polling — respects the project's battery-awareness principle
+
+Verified interactively on the physical device (navigate, toggle, observe, clear), not just statically screenshotted
+
+Disadvantages
+
+`Button` and `MenuLink` duplicate similar Pressable+ripple styling code — a deliberate, small, acceptable tradeoff (see Decision)
+
+### Future
+
+Phase 035 and beyond should extend `DiagnosticsScreen` with real per-engine metrics (init time, memory, battery impact) once those engines exist, per NON_FUNCTIONAL_REQUIREMENTS.md's Observability section — additive to this log viewer, not a replacement.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.

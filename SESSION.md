@@ -36,11 +36,11 @@ TypeScript (`npx tsc --noEmit`)
 
 Unit Tests (`npx jest`)
 
-✅ Passing (7 suites, 28 tests)
+✅ Passing (8 suites, 33 tests)
 
 Physical Device
 
-✅ Verified — logger output confirmed in real `adb logcat` this session (see Testing)
+✅ Verified — full interactive log-viewer test performed this session (see Testing)
 
 Documentation
 
@@ -56,45 +56,41 @@ Stage 1 — Foundation
 
 Current Phase
 
-Phase 014
+Phase 015
 
-Debug Screen
+Architecture Validation
 
 Last Completed
 
-Phase 013
+Phase 014
 
-Logging Framework — `src/logger/` ring-buffer logger with dev-console mirroring, no third-party reporting; wired into `App.tsx`/`ThemeProvider`; confirmed on real device logcat (ADR-026)
+Debug Screen — `DiagnosticsScreen` shows a real, working log viewer over Phase 013's `logger`; added a general-purpose `Button` component; first real use of the `error`/`secondary`/`outline` color tokens (ADR-027)
 
 Completion
 
-13 / 100 Phases
+14 / 100 Phases
 
 ---
 
 ## Current Objective
 
-**Correction carried forward from this session:** Phase 014 "Debug Screen" most likely means giving `DiagnosticsScreen` (an existing shell since Phase 007, README already describing this exact role) its first real content — a log viewer reading `logger.getEntries()` — not adding anything to `DeveloperScreen` as a prior session's note assumed. See ADR-026's correction note on ADR-025.
+Phase 015 will validate the architecture built across Phases 001–014 against ARCHITECTURE_DECISIONS.md/ENGINEERING_PRINCIPLES.md/NON_FUNCTIONAL_REQUIREMENTS.md before Phase 016 starts native module work — likely a review/audit phase rather than new features, given "Architecture Validation" sits right before the native-module boundary.
 
 ---
 
 ## Completed This Session
 
-✔ Added `src/logger/` — a new 10th top-level `src/` folder + `@logger` alias (`babel.config.js`/`tsconfig.json`, per ADR-020's two-file rule), following the exact precedent Phase 006 set for `src/env/`. No existing folder fit: `services/` is explicitly scoped to native-bridge wrappers, not a cross-cutting utility
+✔ Gave `DiagnosticsScreen` its first real content: a header (title + Refresh/Clear) and a `FlatList` log viewer over `logger.getEntries()`, most-recent-first, with an empty state
 
-✔ Built `Logger` (`src/logger/logger.ts`): `debug/info/warn/error(tag, message, data?)`, a fixed 200-entry in-memory ring buffer (`getEntries()` returns a defensive copy, `clear()` empties it), and dev-only console mirroring (`IS_DEV`)
+✔ Used `useFocusEffect` (React Navigation, already a dependency) to refresh on screen focus — no polling, per ENGINEERING_PRINCIPLES.md's battery guidance
 
-✔ **Deliberately did not** add content-based redaction — NON_FUNCTIONAL_REQUIREMENTS.md's "never log PII/messages/contacts" is a convention nothing violates yet (no engine exists to call this with sensitive data); revisit when a real caller needs it
+✔ Color-coded log rows by level: `error` → `theme.colors.error`, `warn` → `theme.colors.secondary`, `info`/`debug` → default text; row separators use `theme.colors.outline`. **First real, honest use of `error`/`secondary`/`outline`** — flagged as unconsumed since Phase 009/ADR-023
 
-✔ **Deliberately did not** integrate any third-party crash/log reporting service (Sentry, Crashlytics, etc.) — PROJECT_MANIFEST.md's no-cloud-dependencies policy applies to logging infrastructure exactly as it does to AI. The logger is 100% local, no network calls
+✔ Added `src/components/Button.tsx` — a generic action button, finally resolving the "no general-purpose Button" gap flagged since ADR-023/024/025. Deliberately kept separate from `MenuLink` despite similar styling, rather than refactoring Phase 010's already-verified code for a minor DRY gain
 
-✔ Wired the logger into two real call sites so it isn't a framework nobody calls: `App.tsx` logs on mount, `ThemeProvider` logs whenever the resolved theme changes (mode + override)
+✔ Added 6 new tests; mocked `useFocusEffect` as a plain `useEffect` for focused unit testing (standard pattern, since it needs a real navigation context to run normally); found and removed one overly fragile test assertion rather than patching it, since the behavior it targeted was already covered elsewhere
 
-✔ Added 7 new tests (per-level recording, optional data, `clear()`, defensive-copy `getEntries()`, ring-buffer eviction at 200 entries, dev-console mirroring)
-
-✔ **On-device verification, with a real gotcha found along the way**: the device had gone to sleep between build and check, and the default `adb logcat -d` window had scrolled the app-launch logs out of view by the time I checked — looked like a silent failure until I widened the buffer (`adb logcat -d -t 3000`) and found both `[App] Nova started` and `[ThemeProvider] Resolved theme changed { mode: 'light', override: 'system' }` exactly as expected in the real `ReactNativeJS` logcat stream. No crashes. Noting this so a future "nothing in the logs" moment isn't mistaken for a real bug before checking a wider buffer window
-
-✔ **Correction found and recorded**: re-reading CLAUDE.md's Navigation architecture (only 10 defined screens, no separate "Debug" screen) showed a prior session's note — that Phase 014 would add a log section to `DeveloperScreen` — was likely wrong. `DiagnosticsScreen` already exists for exactly this purpose per its own Phase-005 README. Corrected in ADR-026 as an addendum to ADR-025 rather than silently rewriting the earlier ADR
+✔ **Full interactive on-device verification**: rebuilt, installed, launched, navigated Home → Settings, toggled the theme override twice (generating real `ThemeProvider` log entries), navigated to Diagnostics, confirmed via screenshot all 4 real entries appeared correctly ordered with correct tags/timestamps. Tapped Clear, confirmed the empty state. One real navigation slip along the way (hardware back from Home — the stack root — exits the app; expected behavior, not a bug, just corrected the test approach to use the header back arrow instead)
 
 ✔ Full regression: `eslint`, `prettier --check`, `tsc --noEmit`, `jest`, `gradlew assembleDebug` — all pass
 
@@ -102,9 +98,9 @@ Completion
 
 ## Pending
 
-Phase 014 — Debug Screen (likely: give `DiagnosticsScreen` real content — a log viewer)
+Phase 015 — Architecture Validation
 
-Phase 015 onward — per PROJECT_ROADMAP.md, none started
+Phase 016 onward — per PROJECT_ROADMAP.md, none started (Phase 016 begins native module work)
 
 ---
 
@@ -118,7 +114,7 @@ None.
 
 1. App identity is still CLI default: `package.json` name is `"Voice"`, Android `applicationId` is `com.voice`, no "Nova" branding, icons, or naming has been applied yet.
 
-2. **Open architectural conflict, to resolve at Phase 016 (Native Module Infrastructure):** CLAUDE.md's own "Folder Structure" section and its separate "Kotlin Structure" section describe two different, inconsistent layouts for native engine code, and neither accounts for the real Gradle constraint that Kotlin sources must live under `android/app/src/main/java/com/voice/...` to compile. Still unresolved.
+2. **Open architectural conflict, to resolve at Phase 016 (Native Module Infrastructure):** CLAUDE.md's own "Folder Structure" section and its separate "Kotlin Structure" section describe two different, inconsistent layouts for native engine code, and neither accounts for the real Gradle constraint that Kotlin sources must live under `android/app/src/main/java/com/voice/...` to compile. Still unresolved — Phase 015 (Architecture Validation) is the natural place to at least explicitly plan the resolution before Phase 016 needs it.
 
 3. `FEATURES` in `src/env/index.ts` (ADR-019) must be updated by hand as each engine's phases complete — nothing currently enforces that a flag reflects reality.
 
@@ -126,18 +122,16 @@ None.
 
 5. The theme preference does not persist across app restarts (ADR-024) — deliberate, temporary, until Phase 016/023/024 exist.
 
-6. `secondary` and `error` color tokens (added Phase 009) still remain unconsumed by any component after three UI-building phases (010, 011, 012).
+6. Logger has no content-based redaction yet (ADR-026) — a documented convention, not enforced in code.
 
-7. Logger has no content-based redaction yet — a documented convention, not enforced in code, since no caller logs sensitive data yet (see ADR-026).
-
-8. Log ring buffer is in-memory only and lost on app restart — acceptable for a debugging aid, not intended as an audit log.
+7. `Button` and `MenuLink` (`src/components/`) duplicate similar Pressable+ripple styling — a deliberate, small, accepted tradeoff (ADR-027), not an oversight.
 
 ---
 
 ## Technical Debt
 
 - App branding/identity not yet applied (see Known Issues #1).
-- Native Kotlin folder layout undecided (see Known Issues #2).
+- Native Kotlin folder layout undecided (see Known Issues #2) — due for resolution by/before Phase 016.
 - Alias definitions still require keeping two files in sync by hand (`babel.config.js`, `tsconfig.json`) — now 10 aliases.
 - Settings persistence is a known, explicit gap until Phase 016/023/024 (see Known Issues #5).
 
@@ -161,7 +155,7 @@ ADB
 
 Verified — `adb devices` reports `10BEAG3HR7003TF	device`
 
-Gotcha learned this session: if the device screen sleeps between actions, the default `adb logcat -d` buffer window can scroll past the moment you care about. Widen with `-t <N>` (e.g. `-t 3000`) before concluding something didn't happen.
+This session performed the most thorough interactive test yet: multi-screen navigation, generating real state changes, and observing their effects surface correctly in a dedicated diagnostics view.
 
 ---
 
@@ -179,13 +173,13 @@ Tests Performed
 
 ✔ `npx tsc --noEmit` — pass
 
-✔ `npx jest` — pass (7 suites, 28 tests)
+✔ `npx jest` — pass (8 suites, 33 tests)
 
 ✔ `cd android && ./gradlew assembleDebug` — BUILD SUCCESSFUL
 
-✔ Installed and launched on device; confirmed via `adb logcat -d -t 3000` that both wired logger calls appear in the real `ReactNativeJS` stream; no crashes
+✔ Installed and launched on device; navigated Home → Settings → toggled theme twice → Diagnostics; confirmed all 4 real log entries displayed correctly; Clear confirmed working
 
-✔ `adb logcat -d -t 3000 | grep AndroidRuntime` — no crashes across a wider buffer window
+✔ `adb logcat -d -t 3000` — no crashes across the session
 
 Pending
 
@@ -197,15 +191,17 @@ No voice, wake word, or speech recognition code exists yet.
 
 Repository state matches:
 
-✔ PROJECT_MANIFEST.md platform policy (no cloud dependency introduced for logging)
+✔ PROJECT_MANIFEST.md platform policy
 
 ✔ CLAUDE.md
 
-✔ ARCHITECTURE_DECISIONS.md ADR-016 through ADR-025, plus ADR-026 (new, also corrects a note in ADR-025)
+✔ ARCHITECTURE_DECISIONS.md ADR-016 through ADR-026, plus ADR-027 (new)
+
+✔ `src/screens/diagnostics/README.md` (Phase 005) — log-viewer portion now fulfilled; engine metrics correctly deferred to Phase 035+
 
 Repository state conflicts with:
 
-None currently open at the React Native layer. See Known Issues #2 for the unresolved native-layer documentation conflict, scoped to Phase 016.
+None currently open at the React Native layer. See Known Issues #2 for the unresolved native-layer documentation conflict, scoped to Phase 016 — Phase 015 (next) should address this before it's needed.
 
 ---
 
@@ -217,7 +213,7 @@ README
 
 Roadmap
 
-✅ Updated — Phase 013 marked complete, Phase 014 marked next (with a scope note)
+✅ Updated — Phase 014 marked complete, Phase 015 marked next
 
 Session
 
@@ -225,27 +221,27 @@ Session
 
 ADR
 
-✅ Updated — ADR-026 added, includes a correction note on ADR-025
+✅ Updated — ADR-027 added
 
 Architecture Docs
 
-❌ `docs/architecture/` exists but is empty — still no architecture documentation written
+❌ `docs/architecture/` exists but is empty — Phase 015 (Architecture Validation) may be the natural place to start this
 
 ---
 
 ## Next Phase
 
-Phase 014
+Phase 015
 
-Debug Screen
+Architecture Validation
 
 Goal
 
-Give `DiagnosticsScreen` (shell since Phase 007) its first real content — most likely a log viewer reading `logger.getEntries()` from Phase 013, per its own Phase-005 README's stated purpose. Confirm this reading before implementing, since it corrects an earlier assumption.
+Validate the architecture built across Phases 001–014 against ARCHITECTURE_DECISIONS.md, ENGINEERING_PRINCIPLES.md, and NON_FUNCTIONAL_REQUIREMENTS.md before Phase 016 starts native module work. Likely scope: an audit/documentation phase (possibly the first real content for `docs/architecture/`), and should explicitly resolve or at least formally plan the Known Issues #2 native-folder-layout conflict, since Phase 016 will need that decision made.
 
 Dependencies
 
-Phase 013 (Logging Framework) — complete
+Phase 014 (Debug Screen) — complete; this is the last Stage 1 phase before native module work begins
 
 Expected Duration
 
@@ -259,24 +255,24 @@ When starting a new session:
 
 1. Read START_HERE.md and DOCS_MANIFEST.json first (hash-check protocol). Only re-read a static document in full if its hash no longer matches.
 2. Always read all four dynamic documents in full: SESSION.md (this file), PROJECT_STATE.json, PROJECT_ROADMAP.md, ARCHITECTURE_DECISIONS.md.
-3. Verify repository health against the actual files and toolchain. Where a phase changes runtime/visual/interactive behavior, verify on the physical device — do not rely on `tsc`/`jest` alone. If a device check shows no logs/no change, consider whether the device went to sleep or the logcat buffer window is too narrow before concluding something is broken (see Physical Device gotcha above).
-4. Continue from Phase 014.
+3. Verify repository health against the actual files and toolchain. Where a phase changes runtime/visual/interactive behavior, verify on the physical device — do not rely on `tsc`/`jest` alone. Remember: hardware back from a stack's root screen exits the app — use the in-app back arrow when testing single-screen pops.
+4. Continue from Phase 015.
 5. Do not redesign previous phases.
-6. Stop after Phase 014.
+6. Stop after Phase 015.
 7. Update this document with verified information only. If any static document changed, update DOCS_MANIFEST.json and START_HERE.md too.
 
 ---
 
 ## Notes
 
-Two corrections happened this session, both handled the same documented way (a new note/ADR pointing at the old one, never silently rewriting history): a stale assumption about where Phase 014 was headed, and a real on-device "no logs found" scare that turned out to be a logcat buffer window issue, not a bug. Both are now recorded so they don't need rediscovering.
+Phase 014 closed out Stage 1's remaining UI-polish gaps (Button component, error/secondary/outline tokens) through genuine need rather than by forcing them in — both had sat honestly-flagged-as-unused for 2-3 phases until a real requirement (a log viewer with leveled entries) called for them naturally. Phase 015 is the last phase before Phase 016 crosses into native Kotlin work, making it a natural checkpoint to resolve the long-standing Known Issue #2 (native folder layout conflict) before it becomes blocking.
 
 ## Resume Token
 
 STAGE=1
 
-PHASE=014
+PHASE=015
 
 STATUS=READY
 
-NEXT=Debug Screen
+NEXT=Architecture Validation
