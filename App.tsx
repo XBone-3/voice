@@ -3,6 +3,7 @@
  * @format
  */
 
+import { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'react-native';
 import { enableScreens } from 'react-native-screens';
@@ -10,10 +11,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from '@navigation/RootNavigator';
 import { toNavigationTheme } from '@navigation/theme';
 import { ThemeProvider, useTheme } from '@theme';
+import { logger } from '@logger';
 
 enableScreens();
 
 function App() {
+  useEffect(() => {
+    logger.info('App', 'Nova started');
+  }, []);
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>

@@ -1196,6 +1196,58 @@ No logging controls yet — the README's third promise is still open, correctly 
 
 When Phase 013 (Logging Framework) exists, add a log-level control section to this screen following the same `Card` + read-only-display-plus-one-control pattern established here and in Phase 011's theme section.
 
+**Correction (2026-07-15, Phase 013):** re-checking CLAUDE.md's Navigation architecture shows there is no separate "Debug" screen among the 10 defined screens — `DiagnosticsScreen` already exists (a shell since Phase 007), and its own Phase-005 README describes exactly this role ("read-only surface over metrics the native engines expose"). Phase 014 "Debug Screen" almost certainly means giving `DiagnosticsScreen` its first real content (a log viewer over Phase 013's `logger.getEntries()`), not adding a log section to `DeveloperScreen` as this ADR's "Future" note above assumed. Left the original text unedited per this document's own rule (never silently rewrite a past ADR) — this note corrects it instead.
+
+---
+
+# ADR-026
+
+## Logging Framework: Mechanism Only, No Third-Party Reporting
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+ENGINEERING_PRINCIPLES.md's Logging section and NON_FUNCTIONAL_REQUIREMENTS.md's Logging Requirements both call for a logging discipline (state transitions, errors, permission changes; never passwords/messages/notification contents/contacts/PII/voice recordings). Nothing enforces or even implements this today — there is no logger at all. PROJECT_ROADMAP.md assigns the framework to this phase and a **separate** Debug Screen to the next (Phase 014) — mirroring the same "mechanism, then UI" split as Theme System/Design Tokens (008/009) and UI Components/Settings Infrastructure (010/011). This phase builds the mechanism only.
+
+No existing `src/` folder fit: `services/` is explicitly scoped ("thin wrappers around the native bridge," per its own Phase-005 README) and a logger isn't a bridge wrapper. Added `src/logger/` as a 10th top-level folder + `@logger` alias, following the exact precedent Phase 006 set when `src/env/` became the 9th.
+
+### Decision
+
+- `src/logger/types.ts` — `LogLevel` (`'debug' | 'info' | 'warn' | 'error'`), `LogEntry` (timestamp, level, tag, message, optional `data`).
+- `src/logger/logger.ts` — a `Logger` class, exported as a singleton `logger`. `debug/info/warn/error(tag, message, data?)` each push into a fixed-capacity (200-entry) in-memory ring buffer (`getEntries()` returns a defensive copy, `clear()` empties it) and, in dev builds only (`IS_DEV`), mirror to the matching `console.*` method for immediate visibility during development.
+- **No content-based redaction was built.** NON_FUNCTIONAL_REQUIREMENTS.md's "never log passwords/messages/contacts/PII/voice recordings" is a convention callers must follow — nothing calls this with sensitive data yet (no engines exist), so there is nothing to enforce today. Revisit once a real caller with sensitive data exists (e.g. Phase 044 Contacts, Phase 046 SMS).
+- **No third-party crash/log reporting service (Sentry, Crashlytics, etc.) was integrated, deliberately.** PROJECT_MANIFEST.md's platform policy prohibits cloud dependencies, and that reasoning applies to logging/crash infrastructure exactly as it does to AI — the logger is 100% local and in-memory, no network calls.
+- Wired into two real call sites so the framework isn't built in isolation: `App.tsx` logs `info` on mount (`"Nova started"`), `ThemeProvider` logs `debug` whenever the resolved theme changes (mode + override). Both verified appearing in real `adb logcat` output (`ReactNativeJS` tag) on the physical device, not just in Jest.
+
+Verified: 7 new tests (entry recording per level, optional `data`, `clear()`, defensive-copy `getEntries()`, ring-buffer eviction at capacity, dev-console mirroring). Full regression pass. On-device: rebuilt, installed, launched, confirmed via `adb logcat -t 3000` (a wider buffer window than usual, since the device had gone to sleep and scrolled the default window past the launch — a genuine gotcha worth noting for next time) that both wired log calls appear exactly as expected, and no crashes.
+
+### Consequences
+
+Advantages
+
+Every future engine phase now has a ready-made, real (not placeholder) logging mechanism to call into
+
+No cloud dependency introduced — consistent with the project's strictest policy
+
+Verified working on-device, not just in tests
+
+Disadvantages
+
+No redaction/sensitivity enforcement yet — purely a documented convention until a real caller needs it
+
+Ring buffer is lost on app restart (acceptable — it's a debugging aid, not an audit log; NON_FUNCTIONAL_REQUIREMENTS.md doesn't ask for log persistence)
+
+### Future
+
+Phase 014 (Debug Screen) should read `logger.getEntries()` to build a log viewer, most likely on `DiagnosticsScreen` rather than `DeveloperScreen` (see the correction note above). Full per-subsystem metrics (init time, memory, battery impact — NON_FUNCTIONAL_REQUIREMENTS.md's Observability section) remain `DiagnosticsScreen`'s later, engine-dependent work (its README already says "Phase 035 and beyond").
+
 ---
 
 # Future ADRs

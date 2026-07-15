@@ -50,10 +50,11 @@ Developer Mode
 
 Phase 013
 Logging Framework
-⏭ Next
+✅ Complete — `src/logger/` (10th top-level folder/alias, following the Phase 006 `src/env/` precedent): a leveled, in-memory ring-buffer logger with dev-console mirroring, no third-party reporting service (ADR-026); wired into `App.tsx`/`ThemeProvider` and confirmed appearing in real device logcat
 
 Phase 014
 Debug Screen
+⏭ Next — likely means giving `DiagnosticsScreen` its first real content (a log viewer over `logger.getEntries()`), not a new screen — see ADR-026's correction note
 
 Phase 015
 Architecture Validation

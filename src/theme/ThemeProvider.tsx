@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 import { useSettingsStore } from '@stores';
+import { logger } from '@logger';
 import ThemeContext from './ThemeContext';
 import { lightTheme } from './light';
 import { darkTheme } from './dark';
@@ -22,6 +23,13 @@ function ThemeProvider({ children }: Props) {
   const resolvedMode =
     themeOverride === 'system' ? systemScheme : themeOverride;
   const theme = resolvedMode === 'dark' ? darkTheme : lightTheme;
+
+  useEffect(() => {
+    logger.debug('ThemeProvider', 'Resolved theme changed', {
+      mode: theme.mode,
+      override: themeOverride,
+    });
+  }, [theme.mode, themeOverride]);
 
   return (
     <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>

@@ -10,6 +10,7 @@ module.exports = {
         root: ['.'],
         alias: {
           '@env': './src/env',
+          '@logger': './src/logger',
           '@screens': './src/screens',
           '@components': './src/components',
           '@navigation': './src/navigation',
