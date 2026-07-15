@@ -1095,6 +1095,60 @@ Phase 011 (Settings Infrastructure) is the next likely consumer of `secondary`/`
 
 ---
 
+# ADR-024
+
+## Settings Infrastructure: State Now, Persistence Later
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+NON_FUNCTIONAL_REQUIREMENTS.md's Storage Requirements assign configuration to Android Jetpack DataStore — a native API. But re-reading PROJECT_ROADMAP.md in full surfaced something worth stopping on: **Phase 016 "Native Module Infrastructure"**, **Phase 023 "Storage Layer"**, and **Phase 024 "Configuration Repository"** are all separate, later phases. None of them exist yet. Building real DataStore-backed persistence in Phase 011 — or even a JS-only stopgap like `@react-native-async-storage/async-storage` — would mean either jumping ahead of the roadmap's own native-module sequencing, or shipping something that gets ripped out and replaced once Phase 016/023/024 land. Both are exactly the kind of technical debt CLAUDE.md's "every decision should make future phases easier" rule warns against.
+
+So this phase scopes to the settings **state and UI only**, using Zustand — already named in the project's own stack (PROJECT_MANIFEST.md/CLAUDE.md), so adding it now fulfills an existing stack decision rather than making a new one.
+
+The concrete feature: ADR-021 explicitly reserved this extension point when Phase 008 built `ThemeProvider` — *"a manual override can be added later (e.g. in Phase 011 Settings) without touching any consumer."* This phase delivers exactly that.
+
+### Decision
+
+- `src/stores/settingsStore.ts` — a Zustand store holding `themeOverride: 'system' | 'light' | 'dark'` (default `'system'`), **in-memory only, no persistence**. The file's own doc comment states this and points to ADR-024/Phase 023-024 so nobody mistakes the omission for an oversight.
+- `ThemeProvider` (`src/theme/ThemeProvider.tsx`) now reads the store: if the override is `'system'`, it behaves exactly as before (`useColorScheme()`); if `'light'`/`'dark'`, that wins regardless of the OS setting. Zero changes to any consumer of `useTheme()` — confirming ADR-021's design held up exactly as intended.
+- `SettingsScreen` now has real content: a `Card` (elevation) containing 3 selectable rows (System/Light/Dark) with a checkmark on the active choice, each a `Pressable` with the same ripple pattern as `MenuLink`.
+- `secondary`/`error` tokens still went unused this phase too (recorded honestly, as with ADR-023) — a single-select list didn't call for them. `elevation` (via `Card`) is now consumed for the first time.
+- No general-purpose `Button` was built — the settings rows are selectable list items, not action buttons; still nothing has needed one.
+
+Verified: 5 new tests (store defaults/setter, `ThemeProvider` resolving `system`/explicit `light`/explicit `dark` regardless of OS scheme) plus a `Card` test. A real test-hygiene bug was found and fixed along the way: resetting the Zustand store in `afterEach` was triggering a React state update on the *previous* test's still-mounted tree outside `act()` — fixed by unmounting before resetting store state.
+
+**On-device verification was the real proof here**, not just tests: installed, launched, opened Settings, tapped "Dark" — the **entire app** (native header, Card surface, all screens) switched to dark immediately, while the device's actual system-level dark mode setting remained "off" the whole time, confirming the override genuinely takes precedence over `useColorScheme()`. Navigated back to Home and confirmed the override persisted across screens. No crashes.
+
+### Consequences
+
+Advantages
+
+Delivers a real, working feature (Nova now has an in-app theme preference, working end-to-end) without building persistence that would need to be rebuilt
+
+Confirms ADR-021's forward-looking design decision was actually correct — no consumer changes needed
+
+`elevation` finally has a real consumer
+
+Disadvantages
+
+The theme choice resets to "System" on every app restart until Phase 023/024 add real persistence — an explicit, documented, temporary limitation, not a bug
+
+`secondary`/`error` tokens remain unconsumed
+
+### Future
+
+When Phase 016 (Native Module Infrastructure) and Phase 023/024 (Storage Layer / Configuration Repository) exist, back `settingsStore` with real persistence (Android DataStore via a native module) rather than reaching for a JS-only stopgap library — read the persisted value on store initialization and write through `setThemeOverride`. The Zustand store shape here should not need to change, only where its state comes from.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.

@@ -42,10 +42,11 @@ UI Components
 
 Phase 011
 Settings Infrastructure
-⏭ Next
+✅ Complete — Zustand `settingsStore` (in-memory only; real persistence explicitly deferred to Phase 023/024 per ADR-024) drives a theme override (System/Light/Dark) consumed by `ThemeProvider` with zero changes to any screen, exactly as ADR-021 anticipated; real `SettingsScreen` UI with a `Card` (first real `elevation` consumer); verified end-to-end on the physical device — the whole app switched to dark instantly, independent of the OS setting
 
 Phase 012
 Developer Mode
+⏭ Next
 
 Phase 013
 Logging Framework
