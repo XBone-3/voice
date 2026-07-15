@@ -30,10 +30,11 @@ Navigation
 
 Phase 008
 Theme System
-⏭ Next
+✅ Complete — `src/theme/` context + provider following OS light/dark (ADR-009), bridged into React Navigation's own theme so the native header matches; applied to all 4 Phase 007 screens; verified in both modes on the physical device (ADR-021). Minimal 5-color-role palette only — full Material 3 token catalog is Phase 009's job
 
 Phase 009
 Design Tokens
+⏭ Next
 
 Phase 010
 UI Components

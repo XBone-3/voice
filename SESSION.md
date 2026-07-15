@@ -36,11 +36,11 @@ TypeScript (`npx tsc --noEmit`)
 
 Unit Tests (`npx jest`)
 
-✅ Passing (2 suites, 4 tests)
+✅ Passing (3 suites, 6 tests)
 
 Physical Device
 
-✅ Verified — built, installed, launched, and navigated on the connected device this session (see Testing)
+✅ Verified — light and dark theme both confirmed on the connected device this session (see Testing)
 
 Documentation
 
@@ -56,55 +56,51 @@ Stage 1 — Foundation
 
 Current Phase
 
-Phase 008
+Phase 009
 
-Theme System
+Design Tokens
 
 Last Completed
 
-Phase 007
+Phase 008
 
-Navigation — React Navigation wired across Home/Settings/Developer/Diagnostics, gated by `FEATURES`; a real Metro alias bug was found and fixed along the way (ADR-020)
+Theme System — `src/theme/` context + provider following the OS light/dark preference, applied to all 4 screens, bridged into React Navigation's native header theming (ADR-021)
 
 Completion
 
-7 / 100 Phases
+8 / 100 Phases
 
 ---
 
 ## Current Objective
 
-Phase 008 will introduce Material 3 design tokens and theming (ADR-009) — the four screens built in Phase 007 currently use raw inline `StyleSheet` values with no shared theme.
+Phase 009 will expand `src/theme/`'s minimal 5-color-role `Theme` into the full Material 3 token catalog (complete color roles, typography scale, spacing scale, elevation, motion curves) called for by ADR-009 — extending the mechanism Phase 008 built, not replacing it.
 
 ---
 
 ## Completed This Session
 
-✔ Installed `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens`; removed the now-unused `@react-native/new-app-screen` dependency
+✔ Built `src/theme/`: `types.ts` (`Theme`/`ThemeMode`), `light.ts`/`dark.ts` (Material 3 baseline color values), `ThemeContext.tsx` + `ThemeProvider.tsx` (plain React Context, no new dependency — reads RN's built-in `useColorScheme()`), `index.ts` barrel
 
-✔ Created `src/navigation/types.ts` (typed `RootStackParamList`, all 10 screens) and `src/navigation/RootNavigator.tsx`, which registers `Home`/`Settings` unconditionally and `Developer`/`Diagnostics` only when `FEATURES` (Phase 006, ADR-019) enables them
+✔ Built `src/navigation/theme.ts` — `toNavigationTheme()` adapter mapping our `Theme` to React Navigation's own `Theme` shape (confirmed exact shape by reading `@react-navigation/native`'s `DefaultTheme`/`DarkTheme` source), so the native header bar follows the app theme instead of React Navigation's unrelated defaults
 
-✔ Built real screen components for the four currently-reachable screens (`HomeScreen`, `SettingsScreen`, `DeveloperScreen`, `DiagnosticsScreen`) with barrel `index.ts` files; the other six screens remain README-only until their engine's `FEATURES` flag flips on, per ADR-019's own design — no dead/unreachable code was added
+✔ Updated `App.tsx` to wrap the app in `ThemeProvider` and pass `toNavigationTheme(theme)` to `NavigationContainer`
 
-✔ Rewrote `App.tsx` to render `NavigationContainer` + `RootNavigator` instead of the CLI's default `NewAppScreen`
+✔ Updated all 4 Phase 007 screens (`HomeScreen`, `SettingsScreen`, `DeveloperScreen`, `DiagnosticsScreen`) to consume `useTheme()` for `backgroundColor`/`color` instead of relying on implicit OS chrome defaults
 
-✔ Fixed a real Jest gap: `@react-navigation`/`react-native-screens` ship ESM and needed `transformIgnorePatterns` extended, or Jest failed on `export` syntax
+✔ Added `__tests__/theme.test.tsx` (2 tests) confirming `ThemeProvider` resolves to `lightTheme`/`darkTheme` based on a mocked `useColorScheme()`
 
-✔ **Found and fixed a real bug via physical-device testing**, exactly the scenario ADR-018 flagged as unverified: Metro's built-in `resolver.extraNodeModules` cannot resolve `@alias/subpath` imports — it parses any `@word/segment` specifier as one atomic npm-style scoped package name with no subpath, confirmed by reading `metro-resolver`'s source directly. Replaced it with `babel-plugin-module-resolver` in `babel.config.js`; removed the now-dead `extraNodeModules` block from `metro.config.js` and `moduleNameMapper` from `jest.config.js`. Recorded as ADR-020, which supersedes the Metro-side half of ADR-018
+✔ **Full on-device verification in both modes** — per the Phase 007 lesson that `tsc`/`jest` passing doesn't guarantee correctness in the real app: toggled the device with `adb shell cmd uimode night yes/no`, relaunched, and screenshotted both. Confirmed light mode (white background, `#6750A4` purple links) and dark mode (`#1C1B1F` background, `#D0BCFF` lavender links) render correctly, **and** that the native header bar changes color too, proving the navigation theme bridge works — not just the screen body. Restored the device to light mode afterward
 
-✔ Along the way, hit and resolved two environment issues unrelated to the code itself: (1) a stale Gradle daemon lock caused by an earlier background build colliding with the user's own terminal attempt — resolved with `gradlew --stop`; (2) `TaskStop` on a background Metro process did not actually kill the underlying Windows `node.exe`, causing a stale server to keep serving a cached bundle after a "restart" — resolved by finding and force-killing the PID bound to port 8081 directly
-
-✔ **Full on-device verification**: built (`gradlew assembleDebug`, BUILD SUCCESSFUL), installed via `adb install -r`, launched via `adb shell am start`, confirmed no crashes/errors via `adb logcat` (`AndroidRuntime:E`, `ReactNativeJS:V`), and visually confirmed via `adb shell screencap` screenshots that: Home renders with the Nova title and all four links, tapping "Settings" navigates with a native-stack transition, and the hardware back button returns to Home
-
-✔ Full regression: `eslint`, `prettier --check`, `tsc --noEmit`, `jest`, `gradlew assembleDebug` — all pass after every change in this phase
+✔ Full regression: `eslint`, `prettier --check`, `tsc --noEmit`, `jest`, `gradlew assembleDebug` — all pass
 
 ---
 
 ## Pending
 
-Phase 008 — Theme System
+Phase 009 — Design Tokens
 
-Phase 009 onward — per PROJECT_ROADMAP.md, none started
+Phase 010 onward — per PROJECT_ROADMAP.md, none started
 
 ---
 
@@ -118,11 +114,13 @@ None.
 
 1. App identity is still CLI default: `package.json` name is `"Voice"`, Android `applicationId` is `com.voice`, no "Nova" branding, icons, or naming has been applied yet.
 
-2. **Open architectural conflict, to resolve at Phase 016 (Native Module Infrastructure):** CLAUDE.md's own "Folder Structure" section and its separate "Kotlin Structure" section describe two different, inconsistent layouts for native engine code, and neither accounts for the real Gradle constraint that Kotlin sources must live under `android/app/src/main/java/com/voice/...` to compile. Still unresolved; flagged so Phase 016 doesn't miss it.
+2. **Open architectural conflict, to resolve at Phase 016 (Native Module Infrastructure):** CLAUDE.md's own "Folder Structure" section and its separate "Kotlin Structure" section describe two different, inconsistent layouts for native engine code, and neither accounts for the real Gradle constraint that Kotlin sources must live under `android/app/src/main/java/com/voice/...` to compile. Still unresolved.
 
 3. `FEATURES` in `src/env/index.ts` (ADR-019) must be updated by hand as each engine's phases complete — nothing currently enforces that a flag reflects reality.
 
-4. The six not-yet-enabled screens (`assistant`, `notifications`, `automation`, `memory`, `history`, `plugins`) remain README-only with no component and no registered route. This is intentional (ADR-019/ADR-020), not an oversight — they get built out when their engine's `FEATURES` flag flips on.
+4. The six not-yet-enabled screens remain README-only with no component and no registered route — intentional (ADR-019/ADR-020), not an oversight.
+
+5. `Theme` currently has only 5 color roles and nothing else (no typography, spacing, or elevation tokens) — intentional scope boundary for Phase 008 (ADR-021), to be expanded by Phase 009.
 
 ---
 
@@ -130,8 +128,8 @@ None.
 
 - App branding/identity not yet applied (see Known Issues #1).
 - Native Kotlin folder layout undecided (see Known Issues #2).
-- Alias definitions still require keeping two files in sync by hand (`babel.config.js`, `tsconfig.json`) — down from three after ADR-020, but not eliminated.
-- Screens have zero shared theming yet (raw `StyleSheet` values) — this is exactly Phase 008's job.
+- Alias definitions still require keeping two files in sync by hand (`babel.config.js`, `tsconfig.json`).
+- No typography/spacing/elevation tokens yet — screens still hardcode font sizes and spacing; Phase 009 will address this.
 
 ---
 
@@ -153,7 +151,7 @@ ADB
 
 Verified — `adb devices` reports `10BEAG3HR7003TF	device`
 
-This session performed real, full device verification for the first time (previous phases were JS-tooling-only): build → install → launch → logcat check → screenshot → tap navigation → back-button navigation, all confirmed working.
+This session verified both light and dark theme rendering, and restored the device to light mode afterward.
 
 ---
 
@@ -171,34 +169,19 @@ Tests Performed
 
 ✔ `npx tsc --noEmit` — pass
 
-✔ `npx jest` — pass (2 suites, 4 tests)
+✔ `npx jest` — pass (3 suites, 6 tests: `App.test.tsx`, `env.test.ts`, new `theme.test.tsx`)
 
 ✔ `cd android && ./gradlew assembleDebug` — BUILD SUCCESSFUL
 
-✔ `adb install -r app-debug.apk` — Success
+✔ Installed and launched on device in light mode (`adb shell cmd uimode night no`) — screenshot confirmed correct colors
 
-✔ `adb shell am start -n com.voice/.MainActivity` — launched without crash
+✔ Installed and launched on device in dark mode (`adb shell cmd uimode night yes`) — screenshot confirmed correct colors, including the native header bar
 
-✔ `adb logcat -d AndroidRuntime:E` / `ReactNativeJS:V` — no fatal crashes, no JS console errors
+✔ `adb logcat -d AndroidRuntime:E` — no crashes in either mode
 
-✔ Screenshot-verified: Home screen renders correctly; tap navigation to Settings works with native transition; hardware back button returns to Home
+Environment note
 
-ADB commands used this session
-
-```
-adb devices
-adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-adb reverse tcp:8081 tcp:8081
-adb shell am force-stop com.voice
-adb logcat -c
-adb shell am start -n com.voice/.MainActivity
-adb logcat -d AndroidRuntime:E *:S
-adb logcat -d ReactNativeJS:V *:S
-adb shell screencap -p /sdcard/<file>.png
-adb pull /sdcard/<file>.png ./<file>.png   # MSYS_NO_PATHCONV=1 needed in Git Bash
-adb shell input tap <x> <y>
-adb shell input keyevent KEYCODE_BACK
-```
+Learned in Phase 007, reapplied here: after stopping a background Metro/Gradle process via `TaskStop`, always verify the underlying Windows process actually died (`Get-NetTCPConnection -LocalPort 8081`) before assuming a restart took effect — `TaskStop` alone is not reliable on this platform.
 
 Pending
 
@@ -212,11 +195,11 @@ Repository state matches:
 
 ✔ PROJECT_MANIFEST.md platform policy
 
-✔ CLAUDE.md (phases followed in order)
+✔ CLAUDE.md
 
-✔ ARCHITECTURE_DECISIONS.md ADR-016 through ADR-019, plus ADR-020 (new — supersedes the Metro-resolver half of ADR-018)
+✔ ARCHITECTURE_DECISIONS.md ADR-016 through ADR-020, plus ADR-021 (new)
 
-✔ ADR-012 (Navigation Architecture) — now directly implemented, not just aspirational
+✔ ADR-009 (Modern Material Design) — now partially implemented (color/dark-mode only; typography/elevation/motion are Phase 009+)
 
 Repository state conflicts with:
 
@@ -232,7 +215,7 @@ README
 
 Roadmap
 
-✅ Updated — Phase 007 marked complete, Phase 008 marked next
+✅ Updated — Phase 008 marked complete, Phase 009 marked next
 
 Session
 
@@ -240,7 +223,7 @@ Session
 
 ADR
 
-✅ Updated — ADR-020 added, superseding the Metro-side portion of ADR-018
+✅ Updated — ADR-021 added
 
 Architecture Docs
 
@@ -250,17 +233,17 @@ Architecture Docs
 
 ## Next Phase
 
-Phase 008
+Phase 009
 
-Theme System
+Design Tokens
 
 Goal
 
-Introduce Material 3 design tokens (color, typography, spacing) in `src/theme/`, per ADR-009, and apply them to the four screens built in Phase 007, which currently use raw inline styles.
+Expand `src/theme/`'s `Theme` interface with the full Material 3 token catalog (complete color roles beyond the current 5, typography scale, spacing scale, elevation, motion curves), building on the mechanism Phase 008 already established rather than replacing it.
 
 Dependencies
 
-Phase 005 (Folder Structure — `src/theme/` already exists), Phase 007 (Navigation — screens exist to theme) — both complete
+Phase 008 (Theme System) — complete
 
 Expected Duration
 
@@ -272,26 +255,26 @@ Medium
 
 When starting a new session:
 
-1. Read START_HERE.md and DOCS_MANIFEST.json first (hash-check protocol — see START_HERE.md). Only re-read a static document in full if its hash no longer matches.
+1. Read START_HERE.md and DOCS_MANIFEST.json first (hash-check protocol). Only re-read a static document in full if its hash no longer matches.
 2. Always read all four dynamic documents in full: SESSION.md (this file), PROJECT_STATE.json, PROJECT_ROADMAP.md, ARCHITECTURE_DECISIONS.md.
-3. Verify repository health against the actual files and toolchain — do not trust documentation without spot-checking, and where a phase's changes affect runtime behavior (not just JS tooling), verify on the physical device, not just via `tsc`/`jest`. Phase 007 is a direct lesson here: `tsc` and `jest` both passed while the app was actually broken on-device.
-4. Continue from Phase 008.
+3. Verify repository health against the actual files and toolchain. Where a phase changes runtime/visual behavior, verify on the physical device — do not rely on `tsc`/`jest` alone (Phase 007's lesson; reapplied successfully in Phase 008 for theme colors).
+4. Continue from Phase 009.
 5. Do not redesign previous phases.
-6. Stop after Phase 008.
+6. Stop after Phase 009.
 7. Update this document with verified information only. If any static document changed, update DOCS_MANIFEST.json and START_HERE.md too.
 
 ---
 
 ## Notes
 
-Phase 007's most important lesson: alias/tooling changes that touch the actual bundler must be verified on a running app, not just via `tsc`/`jest`, which use entirely separate resolution mechanisms and can both pass while Metro is genuinely broken. This is now built into the Claude Code Instructions above. Two environment quirks were also worked around this session (stale Gradle daemon lock from concurrent builds; `TaskStop` not killing the underlying Windows Metro process) — neither is a code issue, both are noted above under Testing/Completed for anyone hitting the same thing later.
+Phase 008 stayed deliberately narrow — a theming *mechanism* with a minimal 5-color palette, not the full Material 3 token catalog PROJECT_ROADMAP.md assigns to Phase 009. This boundary is recorded in ADR-021 specifically so Phase 009 doesn't get treated as redundant or accidentally redesign what Phase 008 already built.
 
 ## Resume Token
 
 STAGE=1
 
-PHASE=008
+PHASE=009
 
 STATUS=READY
 
-NEXT=Theme System
+NEXT=Design Tokens

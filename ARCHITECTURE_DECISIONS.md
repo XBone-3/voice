@@ -936,6 +936,58 @@ This is the definitive alias mechanism going forward. If a new top-level `src/` 
 
 ---
 
+# ADR-021
+
+## Theme System (Material 3 Foundation)
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+PROJECT_ROADMAP.md splits theming into two phases: Phase 008 "Theme System" and Phase 009 "Design Tokens." This ADR covers Phase 008 only — the mechanism (context, provider, light/dark switching) — not the full token catalog. Interpreted literally: Phase 008 builds the plumbing with the smallest honest color set needed to make light/dark mode actually work and be visibly testable; Phase 009 is where the complete Material 3 token catalog (full color roles, typography scale, elevation, motion curves — ADR-009) gets built out on top of this mechanism.
+
+The four screens built in Phase 007 had no shared theming at all — no explicit background/text colors, just default OS chrome. This meant "dark mode" wasn't actually controlled by the app; it was accidental.
+
+### Decision
+
+Built in `src/theme/`:
+
+- `types.ts` — a `Theme` interface: `mode` (`'light' | 'dark'`) plus five color roles (`background`, `surface`, `text`, `textSecondary`, `primary`)
+- `light.ts` / `dark.ts` — two `Theme` objects using Material 3's baseline color values (not invented colors)
+- `ThemeContext.tsx` / `ThemeProvider.tsx` — plain React Context, no new dependency (ADR-013's "can we build it ourselves?" — yes). `ThemeProvider` reads RN's built-in `useColorScheme()` and selects light or dark; consumers only ever call `useTheme()`, never `useColorScheme()` directly, so a manual override can be added later (e.g. in Phase 011 Settings) without touching any consumer.
+- `src/navigation/theme.ts` — a small adapter (`toNavigationTheme`) mapping our `Theme` to React Navigation's own `Theme` shape (`{ dark, colors, fonts }`, confirmed by reading `@react-navigation/native`'s `DefaultTheme`/`DarkTheme` source), so the native header bar follows the same theme instead of showing React Navigation's unrelated defaults.
+- All four Phase 007 screens updated to consume `useTheme()` for `backgroundColor`/`color` instead of relying on implicit OS defaults.
+
+Verification: 2 new tests (`__tests__/theme.test.tsx`) confirming `ThemeProvider` resolves to `lightTheme`/`darkTheme` based on `useColorScheme()`. Per the Phase 007 lesson (`tsc`/`jest` passing doesn't guarantee correctness in the real app), this was also verified on the physical device in both modes: toggled with `adb shell cmd uimode night yes/no`, screenshotted both, confirmed correct colors **and** that the native header bar changes too (via the navigation theme bridge) — not just the screen body.
+
+### Consequences
+
+Advantages
+
+Dark mode is now actually controlled by the app, not accidental OS chrome
+
+Native header bar and screen body always agree, because both read the same `Theme`
+
+No new dependency
+
+Mechanism is provably correct on-device, not just in tests
+
+Disadvantages
+
+Only five color roles exist — no typography, spacing, or elevation tokens yet. Any screen needing those still hardcodes them until Phase 009. This is intentional scope control, not an oversight.
+
+### Future
+
+Phase 009 (Design Tokens) expands `src/theme/` with the full Material 3 catalog. It should extend the existing `Theme` interface rather than replace the mechanism built here.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.
