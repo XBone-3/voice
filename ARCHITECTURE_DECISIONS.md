@@ -1533,6 +1533,56 @@ The first real engine phase to need a runtime permission (most likely Phase 026 
 
 ---
 
+# ADR-032
+
+## Foreground Service (Phase 019) Deferred: No Valid Type Exists Yet
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+PROJECT_ROADMAP.md names Phase 019 "Foreground Service," and ADR-006/ADR-028 already establish that Nova's core assistant functionality must eventually run inside one ("continues operating while the application is backgrounded"). Unlike Phase 018 (Permission Manager), which could be built generically and proven against a real, forward-looking permission (`RECORD_AUDIO`) with no downside, Foreground Services on Android 14+ (Nova's `targetSdkVersion`/`compileSdkVersion` are both 36) cannot be built the same way — the OS itself, not just Play Store policy, enforces that every foreground service declare a `foregroundServiceType` matching real, current behavior:
+
+- **`specialUse`** — the closest thing to a generic catch-all — was researched and found to be **restricted to system apps, VPN apps, and apps holding `SCHEDULE_EXACT_ALARM`/`USE_EXACT_ALARM`** as of Android 14. Declaring it without qualifying under one of those categories throws `ForegroundServiceTypeNotAllowedException` at runtime — not a Play Store rejection, an actual crash. Nova qualifies for none of these today.
+- **`dataSync`** — the historically common "generic background work" type — is capped at **6 hours of runtime per rolling 24-hour period** on Android 15+, after which the OS calls `Service.onTimeout()` and forcibly stops it until the user brings the app to the foreground again. This directly contradicts Nova's own stated vision (VISION.md/PROJECT_CONTEXT.md: "always-awake, continuously listening") and ADR-006's "continues operating while backgrounded."
+- **`microphone`** (or another capability-specific type matching Nova's real eventual purpose) is the type Nova will actually want, but declaring it requires the app to genuinely be doing that work (active audio capture) — which doesn't exist yet. Phase 026 (Audio Engine) / Phase 027 (Microphone Manager) haven't been built.
+
+Given this, the "build generic infrastructure ahead of the engine that needs it" pattern that worked cleanly for Phase 016 (TurboModule commands), Phase 017 (event emission), and Phase 018 (permission check/request) does not transfer to foreground services: there is no honest, non-crashing, non-time-limited type to declare with zero real capability behind it. Building the service now with `dataSync` "as a placeholder" was considered and rejected — it would need to be substantially reworked (not just extended) once a real engine existed, and would misrepresent Nova's actual background-operation model in the interim. The user was asked directly given the real, consequential trade-offs involved (unlike Phase 018's scoping question, every option here has a genuine downside), and chose to defer.
+
+### Decision
+
+- **No Foreground Service code was written this phase.** Phase 019 is marked **Deferred**, not Complete, in PROJECT_ROADMAP.md/PROJECT_STATE.json — it produced a real architectural decision and research finding, not shipped code, similar in spirit to Phase 015 (Architecture Validation) but distinct in that Phase 015's outcome was "validated, nothing needed to change" whereas this phase's outcome is "cannot honestly be built yet."
+- The actual Foreground Service will be built inside whichever future phase first has a real, ongoing capability that justifies a real `foregroundServiceType` — most plausibly **Phase 026 (Audio Engine) or Phase 027 (Microphone Manager)**, using `foregroundServiceType="microphone"` once always-listening audio capture is real. That phase should declare `FOREGROUND_SERVICE_MICROPHONE` (the permission Android requires alongside the type) and build the service directly against its own real work, rather than retrofitting a placeholder service built now.
+- **PROJECT_ROADMAP.md's Phase 020 ("Lifecycle Manager") is not automatically deferred alongside it.** Re-reading its likely scope: a *native* Activity/process lifecycle tracker (foreground/background/destroy transitions exposed as events, via the same `NativeEventEmitter` pattern ADR-030 already proved) is independently useful groundwork for future engines and requires no foreground service, no special permission, and no OS-level type declaration — it can be built the same "infrastructure ahead of the engine" way Phase 016–018 were. This will be confirmed/scoped properly when Phase 020 is actually planned, not assumed here.
+
+### Consequences
+
+Advantages
+
+Avoided shipping a foreground service that would either crash (`specialUse` misuse) or silently violate Nova's own "always operating in the background" vision (`dataSync`'s 6-hour cap) — a real, consequential mistake caught before any code was written, not after
+
+The research (which FGS types are actually viable, and why) is preserved for whichever phase actually builds this, saving that phase from re-deriving it
+
+Keeps the roadmap honest: a phase that genuinely cannot be built yet is marked deferred, not silently reinterpreted into something smaller just to have something to ship
+
+Disadvantages
+
+PROJECT_ROADMAP.md's phase numbering now has an explicit gap — Phase 019 isn't "done" in the usual sense, which is a new situation for this project's tracking documents (Phase 015 was the closest precedent, but that phase's job was validation, not deferral)
+
+The eventual Foreground Service phase, whenever it happens, will be scoped by an engine phase's own needs rather than having dedicated, focused infrastructure attention the way Phase 016–018 gave the bridge/permissions — acceptable, since building it generically here was the option that was rejected
+
+### Future
+
+When Phase 026/027 (or whichever phase turns out to be first) needs a foreground service, revisit this ADR, confirm the real `foregroundServiceType` needed at that point (Android's requirements may have changed further by then — re-verify via current Android developer docs, not this ADR's snapshot), and build the service directly against that phase's real capability rather than reintroducing a generic placeholder.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.

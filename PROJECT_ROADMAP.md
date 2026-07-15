@@ -74,10 +74,11 @@ Permission Manager
 
 Phase 019
 Foreground Service
-⏭ Next
+⏸ Deferred — Android 14+ (Nova targets SDK 36) requires every foreground service to declare a real `foregroundServiceType` matching genuine current behavior. Researched the two generic-seeming options: `specialUse` is restricted to system/VPN/exact-alarm apps (would throw `ForegroundServiceTypeNotAllowedException`), and `dataSync` is capped at 6 hours per 24h on Android 15+ (contradicts Nova's own "always operating in the background" vision). No honest type exists until a real engine justifies one — most likely `microphone` once Phase 026/027 (Audio Engine/Microphone Manager) exist. Deferred rather than built with a placeholder type, per ADR-032. No code changed this phase.
 
 Phase 020
 Lifecycle Manager
+⏭ Next — not blocked by Phase 019's deferral; likely scoped as a native Activity/process lifecycle tracker (foreground/background/destroy events via the Phase 017 event-emission pattern), independent of any foreground service. To be confirmed when actually planned.
 
 Phase 021
 Broadcast Receivers
