@@ -988,6 +988,61 @@ Phase 009 (Design Tokens) expands `src/theme/` with the full Material 3 catalog.
 
 ---
 
+# ADR-022
+
+## Design Tokens (Material 3 Catalog Expansion)
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+ADR-021 explicitly deferred the full Material 3 token catalog to Phase 009 and instructed that it extend, not replace, Phase 008's `Theme` interface and mechanism. This phase does exactly that.
+
+### Decision
+
+Added four new mode-independent token modules (identical between light and dark — only `colors` differs by theme):
+
+- `src/theme/typography.ts` — the full Material 3 type scale (15 styles: `display{Large,Medium,Small}`, `headline{Large,Medium,Small}`, `title{Large,Medium,Small}`, `body{Large,Medium,Small}`, `label{Large,Medium,Small}`), each with `fontSize`/`lineHeight`/`fontWeight`/`letterSpacing`. No `fontFamily` override — Android's system default (Roboto) applies.
+- `src/theme/spacing.ts` — a 4dp-grid scale (`xs`=4 through `xxl`=48).
+- `src/theme/elevation.ts` — Material 3's 6 elevation levels in dp (0, 1, 3, 6, 8, 12), mapping directly to Android's `elevation` style property.
+- `src/theme/motion.ts` — 3 duration buckets (`durationShort`=100ms, `durationMedium`=300ms, `durationLong`=500ms) — a deliberate simplification of M3's full 12-token duration scale, since nothing consumes finer granularity yet; expand when Phase 091 (Animations) actually needs it.
+
+`Theme` (`types.ts`) was extended, not replaced: the 5 Phase 008 color role names (`background`, `surface`, `text`, `textSecondary`, `primary`) are kept for backward compatibility, with the fuller Material 3 vocabulary added alongside (`onPrimary`, `primaryContainer`, `onPrimaryContainer`, `secondary`, `onSecondary`, `onBackground`, `onSurface`, `surfaceVariant`, `onSurfaceVariant`, `error`, `onError`, `outline`). `light.ts`/`dark.ts` were updated with real Material 3 baseline color values for the new roles (the existing 5 values were left untouched to avoid perturbing the already device-verified Phase 008 result) and now import/spread the shared `typography`/`spacing`/`elevation`/`motion` modules instead of each phase re-declaring them.
+
+`secondaryContainer`, `tertiary`/`tertiaryContainer`, and the full 12-token motion scale were deliberately not added — nothing consumes them yet; add when a real consumer (likely Phase 010 UI Components) needs them, per the project's dependency/scope-minimalism principle applied to tokens as well as code.
+
+All 4 Phase 007/008 screens were retrofitted to use `theme.typography.*` and `theme.spacing.*` instead of hardcoded `fontSize`/`gap`/`marginTop` values, closing the Technical Debt item SESSION.md flagged for this phase.
+
+Verification: 3 new tests confirming `typography`/`spacing`/`elevation`/`motion` are identical between `lightTheme`/`darkTheme` (only `colors` differs), the full 15-style type scale is present, and elevation levels increase monotonically. Also verified on the physical device (build, install, launch, screenshot of Home and Settings) — no crashes, correct layout with the new type scale and spacing applied.
+
+### Consequences
+
+Advantages
+
+Screens have a real, complete token vocabulary to build against instead of ad hoc values
+
+Phase 008's mechanism, already device-verified, was untouched — only additive changes
+
+Typography/spacing/elevation/motion defined once, shared by both themes — no duplication
+
+Disadvantages
+
+Token values (especially typography line-heights/letter-spacing) are Material 3 baseline references, not custom-tuned for Nova's brand — acceptable for now, revisit if a distinct visual identity is wanted later
+
+`secondaryContainer`/`tertiary` roles and the full motion scale are still absent — will need adding when a real screen needs them
+
+### Future
+
+Phase 010 (UI Components) is the first expected consumer of the newly added `secondary`/`error` colors and `elevation` tokens (buttons, cards). If it needs roles not yet defined here, extend this catalog rather than hardcoding in the component.
+
+---
+
 # Future ADRs
 
 Every future architectural decision must follow this document.

@@ -34,10 +34,11 @@ Theme System
 
 Phase 009
 Design Tokens
-⏭ Next
+✅ Complete — expanded `src/theme/` with the full Material 3 type scale, spacing scale, elevation levels, and motion durations (ADR-022), extending Phase 008's mechanism without replacing it; retrofitted all 4 screens; verified on the physical device
 
 Phase 010
 UI Components
+⏭ Next
 
 Phase 011
 Settings Infrastructure

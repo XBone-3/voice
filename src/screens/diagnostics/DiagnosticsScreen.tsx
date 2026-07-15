@@ -22,7 +22,7 @@ function createStyles(theme: Theme) {
       backgroundColor: theme.colors.background,
     },
     title: {
-      fontSize: 20,
+      ...theme.typography.titleLarge,
       fontWeight: '600',
       color: theme.colors.text,
     },
