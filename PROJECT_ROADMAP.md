@@ -18,10 +18,11 @@ ESLint + Prettier
 
 Phase 005
 Folder Structure
-⏭ Next
+✅ Complete — created the `src/` tree (`screens/*` × 10, `components/`, `navigation/`, `hooks/`, `services/`, `stores/`, `theme/`, `assets/`) with purpose-documenting READMEs, plus path-alias resolution across Metro/tsconfig/Jest (ADR-018, closing the decision deferred by ADR-016)
 
 Phase 006
 Environment Configuration
+⏭ Next
 
 Phase 007
 Navigation

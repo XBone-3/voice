@@ -776,6 +776,63 @@ None identified
 
 If a real `src/` tree with hand-written code appears under `android/` or `ios/` (unlikely, per ADR-002: Kotlin owns native logic, not JS), the ignore scope in this ADR should be revisited.
 
+Note (2026-07-15, Phase 005): the `ios/` folder referenced above was already removed from the repository before this ADR was written; the ignore pattern was added defensively and is harmless, but SESSION.md had stale "ios/ exists" entries carried forward from before its removal — corrected in Phase 005's SESSION.md update rather than by editing this historical record.
+
+---
+
+# ADR-018
+
+## Path Alias Resolution (React Native Side)
+
+Status
+
+Accepted
+
+Date
+
+2026-07-15
+
+### Context
+
+ADR-016 deferred the path-alias / module-resolution decision to Phase 005, once real folders existed to alias against. Phase 005 created the `src/` tree (`screens/`, `components/`, `navigation/`, `hooks/`, `services/`, `stores/`, `theme/`, `assets/`), so that decision is now due.
+
+Metro (the React Native bundler) does not read `tsconfig.json`'s `paths` for runtime module resolution — a separate mechanism is required for aliases to actually work in the built app, not just in the editor/type-checker. The common solution is `babel-plugin-module-resolver`, a third-party dependency.
+
+Before adding it, ENGINEERING_PRINCIPLES.md's Dependency Management questions were applied: "can we reasonably build this ourselves?" The installed Metro version (`0.84.4`, via `@react-native/metro-config@0.86.0`) was checked directly and already supports `resolver.extraNodeModules` — a built-in mechanism for exactly this purpose.
+
+### Decision
+
+Implement path aliases using Metro's built-in `resolver.extraNodeModules` in `metro.config.js`, with no new dependency. The same mapping is mirrored in two other places that each do their own, separate module resolution:
+
+- `tsconfig.json` (`baseUrl` + `paths`) — for type-checking and editor navigation
+- `jest.config.js` (`moduleNameMapper`) — for test resolution
+
+All three must be kept in sync manually; each file's aliasing block is commented to say so.
+
+Aliases defined: `@screens`, `@components`, `@navigation`, `@hooks`, `@services`, `@stores`, `@theme`, `@assets` — one per top-level `src/` folder, each supporting both a bare import (`from '@theme'`, resolving to that folder's `index`) and a subpath import (`from '@theme/colors'`).
+
+The mechanism was verified end-to-end with a temporary smoke test (a throwaway file + import in each of the three tools, `jest` and `tsc`, both confirmed passing for bare and subpath forms), then removed — no placeholder/dead code was left behind. Full Metro-bundler resolution inside a running app was not exercised in this phase (no screen mounts anything yet); that will be exercised naturally when Phase 007 (Navigation) first runs the app on a physical device.
+
+### Consequences
+
+Advantages
+
+No new dependency
+
+Aliases work identically whether resolved by Metro, Jest, or `tsc`
+
+Verified mechanism, not just verified configuration
+
+Disadvantages
+
+Three files must be kept in sync by hand whenever a new top-level `src/` folder is added — there is no single source of truth for the alias list. Acceptable at this scale (8 aliases); revisit if this becomes error-prone.
+
+Metro-bundler-level resolution (as opposed to Jest/tsc resolution) remains unverified until Phase 007's first real app run.
+
+### Future
+
+If alias drift between the three config files becomes a recurring problem, reconsider `babel-plugin-module-resolver` (which can read a single config) at that point — this ADR's "no new dependency" call was correct for 8 stable, rarely-changing aliases, not necessarily forever.
+
 ---
 
 # Future ADRs
